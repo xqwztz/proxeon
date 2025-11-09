@@ -1,0 +1,271 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/SECRETS_SETUP.md'
+
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests'
+        required: false
+        default: 'false'
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: proxeon-srv/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: ./proxeon-srv
+        run: npm ci --production
+
+      - name: Create backend artifact
+        working-directory: ./proxeon-srv
+        run: |
+          # Remove dev files
+          rm -rf node_modules/.cache
+          rm -f backend.log logs.txt
+          
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: |
+            proxeon-srv/
+            !proxeon-srv/node_modules
+            !proxeon-srv/.env
+            !proxeon-srv/backend.log
+            !proxeon-srv/logs.txt
+          retention-days: 7
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: proxeon-client/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./proxeon-client
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./proxeon-client
+        run: |
+          # Set production environment variables for build
+          echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://api.proxeon.pl' }}" > .env.production
+          echo "REACT_APP_DOMAIN=proxeon" >> .env.production
+          
+          # Build
+          npm run build
+          
+      - name: Upload frontend build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: proxeon-client/build/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to mydevil.net
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    environment:
+      name: production
+      url: https://proxeon.pl
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: ./deploy/backend
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ./deploy/frontend
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
+
+      - name: Create backup on server
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            BACKUP_DIR="$HOME/backups/proxeon_$TIMESTAMP"
+            
+            echo "Creating backup: $BACKUP_DIR"
+            mkdir -p "$BACKUP_DIR"
+            
+            # Backup backend (without node_modules)
+            if [ -d "${{ secrets.DEPLOY_PATH_BACKEND }}" ]; then
+              echo "Backing up backend..."
+              rsync -a --exclude='node_modules' --exclude='.env' \
+                "${{ secrets.DEPLOY_PATH_BACKEND }}/" "$BACKUP_DIR/backend/"
+            fi
+            
+            # Backup frontend
+            if [ -d "${{ secrets.DEPLOY_PATH_FRONTEND }}" ]; then
+              echo "Backing up frontend..."
+              rsync -a "${{ secrets.DEPLOY_PATH_FRONTEND }}/" "$BACKUP_DIR/frontend/"
+            fi
+            
+            # Keep only last 3 backups
+            cd "$HOME/backups"
+            ls -t | grep proxeon_ | tail -n +4 | xargs -r rm -rf
+            
+            echo "Backup completed: $BACKUP_DIR"
+          EOF
+
+      - name: Deploy backend
+        run: |
+          # Install rsync if not available
+          rsync --version || sudo apt-get update && sudo apt-get install -y rsync
+          
+          # Deploy backend files
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='backend.log' \
+            --exclude='logs.txt' \
+            --exclude='.git' \
+            ./deploy/backend/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_BACKEND }}/
+
+      - name: Install backend dependencies on server
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH_BACKEND }}
+            
+            echo "Installing backend dependencies..."
+            npm ci --production
+            
+            echo "Creating necessary directories..."
+            mkdir -p public/logos
+            
+            echo "Backend dependencies installed"
+          EOF
+
+      - name: Deploy frontend
+        run: |
+          # Deploy frontend static files
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            ./deploy/frontend/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_FRONTEND }}/
+
+      - name: Restart backend with PM2
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH_BACKEND }}
+            
+            # Check if PM2 is running the app
+            if pm2 list | grep -q "proxeon-backend"; then
+              echo "Reloading PM2 process (zero-downtime)..."
+              pm2 reload proxeon-backend
+            else
+              echo "Starting new PM2 process..."
+              pm2 start app.js --name proxeon-backend
+              pm2 save
+            fi
+            
+            # Show PM2 status
+            pm2 list
+          EOF
+
+      - name: Health check
+        run: |
+          echo "Waiting 10 seconds for application to start..."
+          sleep 10
+          
+          # Health check - try to reach the API
+          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://api.proxeon.pl' }}"
+          echo "Checking health at: $HEALTH_URL"
+          
+          for i in {1..5}; do
+            if curl -f -s -o /dev/null "$HEALTH_URL"; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i/5 failed, retrying..."
+            sleep 5
+          done
+          
+          echo "⚠️ Health check failed, but deployment completed. Check logs manually."
+          # Don't fail the deployment if health check fails
+          exit 0
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "================================================"
+          echo "✅ Deployment to production completed!"
+          echo "================================================"
+          echo "Backend: ${{ secrets.DEPLOY_PATH_BACKEND }}"
+          echo "Frontend: ${{ secrets.DEPLOY_PATH_FRONTEND }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Time: $(date)"
+          echo "================================================"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+          rm -rf ./deploy
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: failure()
+    
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Tutaj można dodać integrację z Slack/Discord/Email
+

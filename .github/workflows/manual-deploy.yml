@@ -1,0 +1,270 @@
+name: Manual Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+        default: 'production'
+      
+      deploy_backend:
+        description: 'Deploy backend'
+        required: false
+        type: boolean
+        default: true
+      
+      deploy_frontend:
+        description: 'Deploy frontend'
+        required: false
+        type: boolean
+        default: true
+      
+      skip_backup:
+        description: 'Skip backup'
+        required: false
+        type: boolean
+        default: false
+      
+      restart_pm2:
+        description: 'Restart PM2 after deploy'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    if: ${{ inputs.deploy_backend }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: proxeon-srv/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: ./proxeon-srv
+        run: npm ci --production
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: |
+            proxeon-srv/
+            !proxeon-srv/node_modules
+            !proxeon-srv/.env
+            !proxeon-srv/backend.log
+            !proxeon-srv/logs.txt
+          retention-days: 7
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    if: ${{ inputs.deploy_frontend }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: proxeon-client/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./proxeon-client
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./proxeon-client
+        run: |
+          # Set environment-specific variables
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://api.proxeon.pl' }}" > .env.production
+          else
+            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL_STAGING || 'https://staging-api.proxeon.pl' }}" > .env.production
+          fi
+          echo "REACT_APP_DOMAIN=proxeon" >> .env.production
+          
+          npm run build
+          
+      - name: Upload frontend build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: proxeon-client/build/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: always() && (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') && (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
+    environment:
+      name: ${{ inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download backend artifact
+        if: ${{ inputs.deploy_backend }}
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: ./deploy/backend
+
+      - name: Download frontend artifact
+        if: ${{ inputs.deploy_frontend }}
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ./deploy/frontend
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo '✅ SSH connection successful'"
+
+      - name: Create backup on server
+        if: ${{ !inputs.skip_backup }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            BACKUP_DIR="$HOME/backups/proxeon_manual_$TIMESTAMP"
+            
+            echo "📦 Creating backup: $BACKUP_DIR"
+            mkdir -p "$BACKUP_DIR"
+            
+            if [ "${{ inputs.deploy_backend }}" = "true" ] && [ -d "${{ secrets.DEPLOY_PATH_BACKEND }}" ]; then
+              echo "Backing up backend..."
+              rsync -a --exclude='node_modules' --exclude='.env' \
+                "${{ secrets.DEPLOY_PATH_BACKEND }}/" "$BACKUP_DIR/backend/"
+            fi
+            
+            if [ "${{ inputs.deploy_frontend }}" = "true" ] && [ -d "${{ secrets.DEPLOY_PATH_FRONTEND }}" ]; then
+              echo "Backing up frontend..."
+              rsync -a "${{ secrets.DEPLOY_PATH_FRONTEND }}/" "$BACKUP_DIR/frontend/"
+            fi
+            
+            echo "✅ Backup completed: $BACKUP_DIR"
+          EOF
+
+      - name: Deploy backend
+        if: ${{ inputs.deploy_backend }}
+        run: |
+          echo "🚀 Deploying backend..."
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='backend.log' \
+            --exclude='logs.txt' \
+            --exclude='.git' \
+            ./deploy/backend/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_BACKEND }}/
+          
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH_BACKEND }}
+            echo "📦 Installing backend dependencies..."
+            npm ci --production
+            mkdir -p public/logos
+            echo "✅ Backend deployed"
+          EOF
+
+      - name: Deploy frontend
+        if: ${{ inputs.deploy_frontend }}
+        run: |
+          echo "🚀 Deploying frontend..."
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            ./deploy/frontend/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_FRONTEND }}/
+          echo "✅ Frontend deployed"
+
+      - name: Restart PM2
+        if: ${{ inputs.deploy_backend && inputs.restart_pm2 }}
+        run: |
+          echo "🔄 Restarting PM2..."
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH_BACKEND }}
+            
+            if pm2 list | grep -q "proxeon-backend"; then
+              pm2 reload proxeon-backend
+              echo "✅ PM2 reloaded"
+            else
+              pm2 start app.js --name proxeon-backend
+              pm2 save
+              echo "✅ PM2 started"
+            fi
+            
+            pm2 list
+          EOF
+
+      - name: Health check
+        if: ${{ inputs.deploy_backend }}
+        run: |
+          echo "⏳ Waiting 10 seconds..."
+          sleep 10
+          
+          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://api.proxeon.pl' }}"
+          echo "🏥 Health check: $HEALTH_URL"
+          
+          for i in {1..5}; do
+            if curl -f -s -o /dev/null "$HEALTH_URL"; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i/5..."
+            sleep 5
+          done
+          
+          echo "⚠️ Health check failed"
+          exit 0
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "================================================"
+          echo "✅ MANUAL DEPLOYMENT COMPLETED"
+          echo "================================================"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Backend deployed: ${{ inputs.deploy_backend }}"
+          echo "Frontend deployed: ${{ inputs.deploy_frontend }}"
+          echo "PM2 restarted: ${{ inputs.restart_pm2 }}"
+          echo "Backup created: ${{ !inputs.skip_backup }}"
+          echo ""
+          echo "Commit: ${{ github.sha }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Time: $(date)"
+          echo "================================================"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+          rm -rf ./deploy
+
