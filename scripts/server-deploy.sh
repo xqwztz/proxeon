@@ -39,9 +39,9 @@ print_header() {
 }
 
 # Konfiguracja (można nadpisać przez zmienne środowiskowe)
-BACKEND_PATH="${DEPLOY_PATH_BACKEND:-$HOME/domains/api.proxeon.pl}"
-FRONTEND_PATH="${DEPLOY_PATH_FRONTEND:-$HOME/domains/proxeon.pl/public_html}"
-PM2_APP_NAME="${PM2_APP_NAME:-proxeon-backend}"
+BACKEND_PATH="${DEPLOY_PATH_BACKEND:-$HOME/domains/api.meet.sqx.pl}"
+FRONTEND_PATH="${DEPLOY_PATH_FRONTEND:-$HOME/domains/meet.sqx.pl/public_html}"
+# MyDevil.net używa Passenger (nie PM2)
 BACKUP_DIR="$HOME/backups"
 MAX_BACKUPS=5
 
@@ -161,33 +161,20 @@ deploy_frontend() {
     echo ""
 }
 
-# Funkcja do restartu PM2
-restart_pm2() {
-    print_header "🔄 Restarting PM2"
+# Funkcja do restartu Passenger (MyDevil.net)
+restart_passenger() {
+    print_header "🔄 Restarting Passenger Application"
     
     cd "$BACKEND_PATH"
     
-    # Sprawdź czy PM2 jest zainstalowany
-    if ! command -v pm2 &> /dev/null; then
-        print_error "PM2 is not installed!"
-        print_info "Install PM2: npm install -g pm2"
-        return 1
-    fi
+    # Utwórz katalog tmp jeśli nie istnieje
+    mkdir -p tmp
     
-    # Sprawdź czy proces istnieje
-    if pm2 list | grep -q "$PM2_APP_NAME"; then
-        print_info "PM2 process found, reloading..."
-        pm2 reload "$PM2_APP_NAME"
-        print_success "PM2 process reloaded (zero-downtime)"
-    else
-        print_info "PM2 process not found, starting..."
-        pm2 start app.js --name "$PM2_APP_NAME"
-        pm2 save
-        print_success "PM2 process started"
-    fi
+    # Restart aplikacji przez touch tmp/restart.txt (Passenger standard)
+    touch tmp/restart.txt
     
-    # Pokaż status
-    pm2 list
+    print_success "Passenger restart triggered (tmp/restart.txt updated)"
+    print_info "Application will restart on next HTTP request"
     
     echo ""
 }
@@ -199,16 +186,17 @@ health_check() {
     print_info "Waiting 5 seconds for application to start..."
     sleep 5
     
-    # Sprawdź PM2 status
-    if pm2 list | grep -q "$PM2_APP_NAME"; then
-        PM2_STATUS=$(pm2 list | grep "$PM2_APP_NAME" | awk '{print $10}')
-        if [ "$PM2_STATUS" = "online" ]; then
-            print_success "PM2 process is online"
+    # Sprawdź czy Passenger działa (przez próbę HTTP request)
+    if [ ! -z "$BACKEND_URL" ]; then
+        print_info "Testing backend URL: $BACKEND_URL"
+        if curl -s -f -o /dev/null "$BACKEND_URL"; then
+            print_success "Backend responds to HTTP requests"
         else
-            print_warning "PM2 process status: $PM2_STATUS"
+            print_warning "Backend may not be responding yet (Passenger starts on first request)"
         fi
     else
-        print_warning "PM2 process not found"
+        print_info "BACKEND_URL not set, skipping HTTP check"
+        print_info "Passenger will start application on first HTTP request"
     fi
     
     # Sprawdź czy port nasłuchuje (jeśli znamy port)
@@ -235,7 +223,7 @@ main() {
     case "$DEPLOY_TARGET" in
         backend)
             deploy_backend
-            restart_pm2
+            restart_passenger
             health_check
             ;;
         frontend)
@@ -244,7 +232,7 @@ main() {
         all)
             deploy_backend
             deploy_frontend
-            restart_pm2
+            restart_passenger
             health_check
             ;;
         *)

@@ -156,7 +156,7 @@ JWT_SECRET=wygeneruj-silny-losowy-string-min-64-znaki
 ### Frontend (`proxeon-client/.env.local`)
 
 ```env
-REACT_APP_SERVER_URL=https://api.proxeon.pl
+REACT_APP_SERVER_URL=https://api.meet.sqx.pl
 REACT_APP_DOMAIN=proxeon
 PORT=3000
 ```

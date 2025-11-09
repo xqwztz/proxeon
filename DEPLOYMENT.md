@@ -144,7 +144,7 @@ BBB_DOWNLOAD_URL=https://twoj-bbb-serwer.pl/download/presentation/
 BBB_CHECKSUM_ALGORITHM=sha1
 
 # Email (opcjonalnie - do resetowania haseł)
-EMAIL_FROM=noreply@proxeon.pl
+EMAIL_FROM=noreply@meet.sqx.pl
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=twoj-email@gmail.com
@@ -183,7 +183,7 @@ mongosh
 use proxeon
 
 db.accounts.insertOne({
-  email: "admin@proxeon.pl",
+  email: "admin@meet.sqx.pl",
   passwordHash: "$2a$10$yourHashedPasswordHere",  // Musisz zahashować hasło
   firstName: "Admin",
   lastName: "Proxeon",
@@ -213,7 +213,7 @@ async function createAdmin() {
   const passwordHash = await bcrypt.hash(password, 10);
   
   const admin = new Account({
-    email: 'admin@proxeon.pl',
+    email: 'admin@meet.sqx.pl',
     passwordHash: passwordHash,
     firstName: 'Admin',
     lastName: 'Proxeon',
@@ -224,7 +224,7 @@ async function createAdmin() {
   
   await admin.save();
   console.log('Admin created successfully!');
-  console.log('Email: admin@proxeon.pl');
+  console.log('Email: admin@meet.sqx.pl');
   console.log('Password: Admin123!');
   console.log('CHANGE THIS PASSWORD AFTER FIRST LOGIN!');
   
@@ -273,7 +273,7 @@ nano .env.local
 **Przykładowa konfiguracja `.env.local`:**
 
 ```env
-REACT_APP_SERVER_URL=https://api.proxeon.pl
+REACT_APP_SERVER_URL=https://api.meet.sqx.pl
 REACT_APP_DOMAIN=proxeon
 PORT=3000
 ```
@@ -325,7 +325,7 @@ sudo nano /etc/nginx/sites-available/proxeon-api
 ```nginx
 server {
     listen 80;
-    server_name api.proxeon.pl;
+    server_name api.meet.sqx.pl;
 
     # Przekierowanie na HTTPS (po skonfigurowaniu SSL)
     # return 301 https://$server_name$request_uri;
@@ -370,7 +370,7 @@ sudo nano /etc/nginx/sites-available/proxeon-frontend
 ```nginx
 server {
     listen 80;
-    server_name proxeon.pl www.proxeon.pl;
+    server_name meet.sqx.pl www.meet.sqx.pl;
 
     # Przekierowanie na HTTPS (po skonfigurowaniu SSL)
     # return 301 https://$server_name$request_uri;
@@ -427,10 +427,10 @@ sudo apt-get install -y certbot python3-certbot-nginx
 
 ```bash
 # Dla API
-sudo certbot --nginx -d api.proxeon.pl
+sudo certbot --nginx -d api.meet.sqx.pl
 
 # Dla frontendu
-sudo certbot --nginx -d proxeon.pl -d www.proxeon.pl
+sudo certbot --nginx -d meet.sqx.pl -d www.meet.sqx.pl
 ```
 
 ### 3. Auto-renewal

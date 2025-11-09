@@ -38,9 +38,9 @@ print_header() {
 }
 
 # Konfiguracja
-BACKEND_PATH="${DEPLOY_PATH_BACKEND:-$HOME/domains/api.proxeon.pl}"
-FRONTEND_PATH="${DEPLOY_PATH_FRONTEND:-$HOME/domains/proxeon.pl/public_html}"
-PM2_APP_NAME="${PM2_APP_NAME:-proxeon-backend}"
+BACKEND_PATH="${DEPLOY_PATH_BACKEND:-$HOME/domains/api.meet.sqx.pl}"
+FRONTEND_PATH="${DEPLOY_PATH_FRONTEND:-$HOME/domains/meet.sqx.pl/public_html}"
+# MyDevil.net używa Passenger (nie PM2)
 BACKUP_DIR="$HOME/backups"
 
 echo ""
@@ -179,29 +179,17 @@ rollback_frontend() {
     echo ""
 }
 
-# Restart PM2
-restart_pm2() {
-    print_header "🔄 Restarting PM2"
+# Restart Passenger (MyDevil.net)
+restart_passenger() {
+    print_header "🔄 Restarting Passenger Application"
     
     cd "$BACKEND_PATH"
     
-    if ! command -v pm2 &> /dev/null; then
-        print_error "PM2 is not installed!"
-        return 1
-    fi
+    mkdir -p tmp
+    touch tmp/restart.txt
     
-    if pm2 list | grep -q "$PM2_APP_NAME"; then
-        print_info "Restarting PM2 process..."
-        pm2 restart "$PM2_APP_NAME"
-        print_success "PM2 process restarted"
-    else
-        print_warning "PM2 process not found, starting..."
-        pm2 start app.js --name "$PM2_APP_NAME"
-        pm2 save
-        print_success "PM2 process started"
-    fi
-    
-    pm2 list
+    print_success "Passenger restart triggered (tmp/restart.txt updated)"
+    print_info "Application will restart on next HTTP request"
     
     echo ""
 }
@@ -213,15 +201,17 @@ health_check() {
     print_info "Waiting 10 seconds for application to start..."
     sleep 10
     
-    if pm2 list | grep -q "$PM2_APP_NAME"; then
-        PM2_STATUS=$(pm2 list | grep "$PM2_APP_NAME" | awk '{print $10}')
-        if [ "$PM2_STATUS" = "online" ]; then
-            print_success "PM2 process is online"
+    # Sprawdź czy Passenger działa (przez próbę HTTP request)
+    if [ ! -z "$BACKEND_URL" ]; then
+        print_info "Testing backend URL: $BACKEND_URL"
+        if curl -s -f -o /dev/null "$BACKEND_URL"; then
+            print_success "Backend responds to HTTP requests"
         else
-            print_warning "PM2 process status: $PM2_STATUS"
+            print_warning "Backend may not be responding yet (Passenger starts on first request)"
         fi
     else
-        print_error "PM2 process not found!"
+        print_info "BACKEND_URL not set, skipping HTTP check"
+        print_info "Passenger will start application on first HTTP request"
     fi
     
     echo ""
@@ -235,7 +225,7 @@ main() {
     
     rollback_backend
     rollback_frontend
-    restart_pm2
+    restart_passenger
     health_check
     
     # Summary

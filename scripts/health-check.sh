@@ -36,8 +36,8 @@ print_header() {
 }
 
 # Konfiguracja
-BACKEND_PATH="${DEPLOY_PATH_BACKEND:-$HOME/domains/api.proxeon.pl}"
-PM2_APP_NAME="${PM2_APP_NAME:-proxeon-backend}"
+BACKEND_PATH="${DEPLOY_PATH_BACKEND:-$HOME/domains/api.meet.sqx.pl}"
+# MyDevil.net używa Passenger (nie PM2)
 VERBOSE="${1}"
 
 CHECKS_PASSED=0
@@ -51,50 +51,41 @@ print_info "Checking application health..."
 print_info "Time: $(date)"
 echo ""
 
-# Funkcja do sprawdzenia PM2
-check_pm2() {
-    print_header "1. PM2 Process Check"
+# Funkcja do sprawdzenia Passenger (MyDevil.net)
+check_passenger() {
+    print_header "1. Passenger Application Check"
     
-    if ! command -v pm2 &> /dev/null; then
-        print_error "PM2 is not installed"
-        ((CHECKS_FAILED++))
-        return 1
-    fi
-    
-    print_success "PM2 is installed"
-    
-    if pm2 list | grep -q "$PM2_APP_NAME"; then
-        PM2_STATUS=$(pm2 list | grep "$PM2_APP_NAME" | awk '{print $10}')
-        PM2_RESTARTS=$(pm2 list | grep "$PM2_APP_NAME" | awk '{print $12}')
-        PM2_UPTIME=$(pm2 list | grep "$PM2_APP_NAME" | awk '{print $14}')
-        PM2_MEMORY=$(pm2 list | grep "$PM2_APP_NAME" | awk '{print $16}')
-        PM2_CPU=$(pm2 list | grep "$PM2_APP_NAME" | awk '{print $18}')
-        
-        if [ "$PM2_STATUS" = "online" ]; then
-            print_success "PM2 process is online"
-            print_info "  Uptime: $PM2_UPTIME"
-            print_info "  Restarts: $PM2_RESTARTS"
-            print_info "  Memory: $PM2_MEMORY"
-            print_info "  CPU: $PM2_CPU"
-            ((CHECKS_PASSED++))
-            
-            if [ "$PM2_RESTARTS" -gt 5 ]; then
-                print_warning "  High restart count: $PM2_RESTARTS"
-                ((CHECKS_WARNING++))
-            fi
-        else
-            print_error "PM2 process status: $PM2_STATUS"
-            ((CHECKS_FAILED++))
-        fi
+    # Sprawdź czy plik restart.txt istnieje (standard Passenger)
+    if [ -f "$BACKEND_PATH/tmp/restart.txt" ]; then
+        RESTART_TIME=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "$BACKEND_PATH/tmp/restart.txt" 2>/dev/null || stat -c "%y" "$BACKEND_PATH/tmp/restart.txt" 2>/dev/null | cut -d'.' -f1)
+        print_success "Passenger restart file exists"
+        print_info "  Last restart: $RESTART_TIME"
+        ((CHECKS_PASSED++))
     else
-        print_error "PM2 process '$PM2_APP_NAME' not found"
-        ((CHECKS_FAILED++))
-        
-        if [ "$VERBOSE" = "--verbose" ]; then
-            print_info "Available PM2 processes:"
-            pm2 list
-        fi
+        print_warning "Passenger restart file (tmp/restart.txt) not found"
+        print_info "  Application may not have been restarted yet"
+        ((CHECKS_WARNING++))
     fi
+    
+    # Sprawdź czy katalog aplikacji istnieje
+    if [ -d "$BACKEND_PATH" ]; then
+        print_success "Application directory exists: $BACKEND_PATH"
+        ((CHECKS_PASSED++))
+    else
+        print_error "Application directory not found: $BACKEND_PATH"
+        ((CHECKS_FAILED++))
+    fi
+    
+    # Sprawdź czy app.js istnieje
+    if [ -f "$BACKEND_PATH/app.js" ]; then
+        print_success "Main application file (app.js) exists"
+        ((CHECKS_PASSED++))
+    else
+        print_error "Main application file (app.js) not found"
+        ((CHECKS_FAILED++))
+    fi
+    
+    print_info "  Note: Passenger starts application on first HTTP request"
     
     echo ""
 }
@@ -307,13 +298,20 @@ check_api_endpoint() {
 check_logs() {
     print_header "6. Logs Check"
     
-    if pm2 list | grep -q "$PM2_APP_NAME"; then
-        print_info "Recent PM2 logs (last 10 lines):"
+    # MyDevil.net Passenger logs są zazwyczaj w panelu DevilWEB
+    # lub w katalogu aplikacji jako stderr/stdout
+    print_info "Passenger logs location:"
+    print_info "  - Panel DevilWEB: Strony WWW → [Twoja domena] → Logi"
+    print_info "  - Application directory: $BACKEND_PATH"
+    
+    # Szukaj lokalnych logów
+    if [ -f "$BACKEND_PATH/app.log" ]; then
+        print_info "Application log found: app.log"
+        print_info "Last 10 lines:"
         echo ""
-        pm2 logs "$PM2_APP_NAME" --lines 10 --nostream 2>/dev/null || print_warning "Could not retrieve PM2 logs"
+        tail -n 10 "$BACKEND_PATH/app.log"
     else
-        print_warning "PM2 process not found, no logs to show"
-        ((CHECKS_WARNING++))
+        print_info "No local application logs found (app.log)"
     fi
     
     echo ""
@@ -343,7 +341,7 @@ check_disk_space() {
 
 # Main execution
 main() {
-    check_pm2
+    check_passenger
     check_port
     check_files
     check_mongodb

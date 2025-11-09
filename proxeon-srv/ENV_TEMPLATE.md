@@ -24,9 +24,11 @@ Przykładowa konfiguracja pliku `.env` dla Proxeon Backend.
 # ============================================
 # Server Configuration
 # ============================================
-PORT=1234
+# PORT - dla MyDevil.net meet.sqx.pl użyj zarezerwowanego portu: 55984
+# PORT - dla development lokalnie: 1234
+PORT=55984
 NODE_ENV=production
-DOMAIN=proxeon
+DOMAIN=meet.sqx.pl
 
 # ============================================
 # MongoDB Configuration

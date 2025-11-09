@@ -137,7 +137,7 @@ if command -v nginx &> /dev/null; then
         cat > /etc/nginx/sites-available/proxeon-frontend << 'EOF'
 server {
     listen 80;
-    server_name proxeon.pl www.proxeon.pl;
+    server_name meet.sqx.pl www.meet.sqx.pl;
 
     root /var/www/proxeon/proxeon-client/build;
     index index.html;

@@ -109,8 +109,8 @@ Przejdź do: **Repository Settings** → **Secrets and variables** → **Actions
 | `SSH_HOST` | Host serwera | `s1.mydevil.net` |
 | `SSH_USER` | Login SSH | `twoj-login` |
 | `SSH_PORT` | Port SSH | `22` |
-| `DEPLOY_PATH_BACKEND` | Ścieżka backendu | `/home/user/domains/api.proxeon.pl` |
-| `DEPLOY_PATH_FRONTEND` | Ścieżka frontendu | `/home/user/domains/proxeon.pl/public_html` |
+| `DEPLOY_PATH_BACKEND` | Ścieżka backendu | `/home/user/domains/api.meet.sqx.pl` |
+| `DEPLOY_PATH_FRONTEND` | Ścieżka frontendu | `/home/user/domains/meet.sqx.pl/public_html` |
 
 #### Opcjonalne Secrets:
 
@@ -126,8 +126,12 @@ Przejdź do: **Repository Settings** → **Secrets and variables** → **Actions
 ssh user@s1.mydevil.net
 
 # Utwórz katalogi
-mkdir -p ~/domains/api.proxeon.pl
-mkdir -p ~/domains/proxeon.pl/public_html
+mkdir -p ~/domains/api.meet.sqx.pl
+mkdir -p ~/domains/meet.sqx.pl/public_html
+
+# Dla development (w przyszłości):
+# mkdir -p ~/domains/api.4meet.sqx.pl
+# mkdir -p ~/domains/4meet.sqx.pl/public_html
 mkdir -p ~/backups
 
 # Skopiuj skrypty (pierwszy raz ręcznie)
@@ -138,19 +142,20 @@ ssh user@s1.mydevil.net "chmod +x ~/scripts/*.sh"
 npm install -g pm2
 
 # Upewnij się że .env jest skonfigurowany w katalogu backendu
-cd ~/domains/api.proxeon.pl
+cd ~/domains/api.meet.sqx.pl
 cp env.local .env
 nano .env  # Skonfiguruj zmienne
 ```
 
 ### 4. Konfiguracja .env na serwerze
 
-Plik `/home/user/domains/api.proxeon.pl/.env`:
+Plik `/home/user/domains/api.meet.sqx.pl/.env`:
 
 ```env
-PORT=1234
+# Port zarezerwowany w MyDevil.net dla meet.sqx.pl
+PORT=55984
 NODE_ENV=production
-DOMAIN=proxeon
+DOMAIN=meet.sqx.pl
 
 # BigBlueButton
 BBB_URL=https://twoj-serwer-bbb.pl/bigbluebutton/
@@ -165,7 +170,7 @@ MONGO_URI=mongodb://localhost:27017/proxeon
 JWT_SECRET=silny-losowy-string-min-64-znaki
 
 # Email (opcjonalnie)
-EMAIL_FROM=noreply@proxeon.pl
+EMAIL_FROM=noreply@meet.sqx.pl
 EMAIL_HOST=smtp.twoj-serwer.pl
 EMAIL_PORT=587
 EMAIL_USER=twoj-email
@@ -385,7 +390,7 @@ cd proxeon-client
 npm run build
 
 # Wgraj na serwer
-rsync -avz --delete build/ user@s1.mydevil.net:~/domains/proxeon.pl/public_html/
+rsync -avz --delete build/ user@s1.mydevil.net:~/domains/meet.sqx.pl/public_html/
 ```
 
 ---
@@ -432,7 +437,7 @@ rsync -av "$BACKUP_DIR/backend/" ~/domains/api.proxeon.pl/
 rsync -av "$BACKUP_DIR/frontend/" ~/domains/proxeon.pl/public_html/
 
 # Restart PM2
-cd ~/domains/api.proxeon.pl
+cd ~/domains/api.meet.sqx.pl
 npm ci --production
 pm2 restart proxeon-backend
 ```
@@ -533,7 +538,7 @@ PM2 process 'proxeon-backend' not found
 **Rozwiązanie:**
 ```bash
 # Na serwerze
-cd ~/domains/api.proxeon.pl
+cd ~/domains/api.meet.sqx.pl
 pm2 start app.js --name proxeon-backend
 pm2 save
 pm2 startup  # Konfiguruj autostart
@@ -608,7 +613,7 @@ Error: Cannot find module 'xyz'
 
 **Rozwiązanie:**
 ```bash
-cd ~/domains/api.proxeon.pl
+cd ~/domains/api.meet.sqx.pl
 rm -rf node_modules package-lock.json
 npm ci --production
 pm2 restart proxeon-backend
