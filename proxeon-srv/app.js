@@ -49,7 +49,7 @@ app.get("/health", (req, res) => {
     // Get port using same logic as server startup
     let healthPort;
     if (process.env.NODE_ENV === "production") {
-      healthPort = process.env.PORT_API_PRODUCTION || process.env.PORT || 55984;
+      healthPort = process.env.PORT_API || process.env.PORT || 55984;
     } else {
       healthPort = process.env.PORT_API_DEV || process.env.PORT || 1234;
     }
@@ -186,8 +186,8 @@ app.post("/upload", authorize(Role.Admin), function (req, res) {
 // Use environment-specific port variables with fallbacks
 let port;
 if (process.env.NODE_ENV === "production") {
-  // Production: use PORT_API_PRODUCTION (default: 55984) or fallback to PORT or 80
-  port = process.env.PORT_API_PRODUCTION || process.env.PORT || 55984;
+  // Production: use PORT_API (default: 55984) or fallback to PORT or 55984
+  port = process.env.PORT_API || process.env.PORT || 55984;
 } else {
   // Development: use PORT_API_DEV (default: 1234) or fallback to PORT or 1234
   port = process.env.PORT_API_DEV || process.env.PORT || 1234;

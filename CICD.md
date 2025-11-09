@@ -153,7 +153,7 @@ nano .env  # Skonfiguruj zmienne
 
 ```env
 # Port API dla produkcji (zarezerwowany w MyDevil.net dla meet.sqx.pl)
-PORT_API_PRODUCTION=55984
+PORT_API=55984
 NODE_ENV=production
 DOMAIN=meet.sqx.pl
 ```
@@ -189,7 +189,7 @@ EMAIL_USER=twoj-email
 EMAIL_PASSWORD=twoje-haslo
 ```
 
-**Uwaga:** Port API jest teraz konfigurowany przez zmienne `PORT_API_PRODUCTION` (produkcja) i `PORT_API_DEV` (development). Jeśli nie są ustawione, aplikacja użyje wartości domyślnych (55984 dla produkcji, 1234 dla development).
+**Uwaga:** Port API jest teraz konfigurowany przez zmienne `PORT_API` (produkcja) i `PORT_API_DEV` (development). Jeśli nie są ustawione, aplikacja użyje wartości domyślnych (55984 dla produkcji, 1234 dla development).
 
 **⚠️ WAŻNE:** Plik `.env` NIE JEST deployowany przez CI/CD - musisz go skonfigurować ręcznie na serwerze!
 
