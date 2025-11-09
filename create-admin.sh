@@ -75,16 +75,17 @@ cd "$BACKEND_DIR"
 # Utwórz tymczasowy skrypt Node.js w katalogu backendu
 TEMP_SCRIPT="$PWD/create-admin-temp.js"
 cat > "$TEMP_SCRIPT" << EOF
+require('rootpath')();
+require('dotenv').config();
+
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 
-require('dotenv').config();
-
-const config = require('./_helpers/db');
+const config = require('_helpers/db');
 
 async function createAdmin() {
   try {
-    const Account = require('./accounts/account.model');
+    const Account = require('accounts/account.model');
     
     // Sprawdź czy admin już istnieje
     const existing = await Account.findOne({ email: '$ADMIN_EMAIL' });
