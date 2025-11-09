@@ -1,0 +1,69 @@
+image: node:12.18.3
+
+stages:
+  - build
+  - build_dev
+  - deploy
+  - deploy_dev
+
+build:
+  stage: build
+  artifacts:
+    paths:
+      - build/
+  script:
+    - export REACT_APP_SERVER_URL=$SERVER_URL
+    - export REACT_APP_DOMAIN=$DOMAIN_NAME
+    - npm run preinstall
+    - npm install
+    - npm run postinstall
+    - CI=false npm run build
+  only:
+    - master
+
+build_dev:
+  stage: build
+  artifacts:
+    paths:
+      - build/
+  script:
+    - export REACT_APP_SERVER_URL=$SERVER_URL_DEV
+    - export REACT_APP_DOMAIN=$DOMAIN_NAME_DEV
+    - npm run preinstall
+    - npm install
+    - npm run postinstall
+    - CI=false npm run build
+  only:
+    - develop
+   
+deploy:
+  stage: deploy
+  environment:
+    name: deploy
+    url: "$SSH_DOMAIN"
+  before_script:
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_KEY" | base64 -d)
+  script:
+    - scp -o StrictHostKeyChecking=no -rv ./build/* "$SSH_USER"@"$SSH_DOMAIN":"$DEPLOY_PATH"
+    - ssh -o StrictHostKeyChecking=no "$SSH_USER"@"$SSH_DOMAIN" "devil www restart "$DOMAIN""
+    - curl https://"$DOMAIN"
+  only:
+    - master
+
+deploy_dev:
+  stage: deploy_dev
+  environment:
+    name: deploy_dev
+    url: "$SSH_DOMAIN"
+  before_script:
+    - 'which ssh-agent || ( apt-get install -qq openssh-client )'
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_KEY" | base64 -d)
+  script:
+    - scp -o StrictHostKeyChecking=no -rv ./build/* "$SSH_USER"@"$SSH_DOMAIN":"$DEPLOY_PATH_DEV"
+    - ssh -o StrictHostKeyChecking=no "$SSH_USER"@"$SSH_DOMAIN" "devil www restart "$DOMAIN_DEV""
+    - curl https://"$DOMAIN_DEV"
+  only:
+    - develop    

@@ -1,0 +1,267 @@
+$themes: (
+  light: (
+    colorBackground: white,
+    colorBackgroundBody: #E6E7EB,
+    colorHeaderDataPicker:#6db0ff,
+    colorText: #646777,
+    colorTextAdditional: #646777,
+    colorHover: #fafbfe,
+    colorFolderHover: #f0eeee,
+    colorBorder: #eff1f5,
+    colorIcon: #dddddd,
+    imgInvert: invert(0%),
+    colorFieldsBorder: #f2f4f7,
+    colorBubble: rgba(242, 244, 247, 0.65),
+    colorBubbleActive: rgba(234, 238, 255, 0.6),
+    colorScrollbar: #B4BFD0,
+    colorFitness: #646777,
+    colorEmoji: #232329,
+  ),
+  dark: (
+    colorBackground: #232329,
+    colorBackgroundBody: #2a2a31,
+    colorHeaderDataPicker:#063263,
+    colorText: #dddddd,
+    colorTextAdditional: #999999,
+    colorHover: #050405,
+    colorFolderHover: #ffffff1A,
+    colorBorder: #333246,
+    colorIcon: #605f7b,
+    imgInvert: invert(100%),
+    colorFieldsBorder: #33333a,
+    colorBubble: rgba(68, 79, 97, 0.65),
+    colorBubbleActive: rgba(92, 104, 156, 0.6),
+    colorScrollbar: #606071,
+    colorFitness: #ffffff,
+    colorEmoji: #ffffff,
+  )
+);
+
+
+@mixin themify($themes) {
+  @each $theme, $map in $themes {
+    .theme-#{$theme} & {
+      $theme-map: () !global;
+      @each $key, $submap in $map {
+        $value: map-get(map-get($themes, $theme), '#{$key}');
+        $theme-map: map-merge($theme-map, ($key: $value)) !global;
+      }
+      @content;
+      $theme-map: null !global;
+    }
+  }
+}
+
+@function themed($key) {
+  @return map-get($theme-map, $key);
+}
+
+$colors: (
+  orange: (
+    backgroundColor: linear-gradient(.15turn, #f33a01, #ff9201 80%),
+    backgroundColorHover: #ff6600,
+    borderColor: linear-gradient(.15turn, #f33a01, #ff9201 80%),
+    beforeColor: linear-gradient(.15turn, #f33a01, #ff9201 80%),
+    textColor: #ff6600,
+    outlineBorderColor:#ff781f,
+    outlineTextColor:#ff781f,
+    outlineHoverColor:#ffffff,
+    outlineBeforeColor:#ff781f,
+    boxShadowColor:rgba(255,130,41,0.5)
+  ),
+  blue: (
+    backgroundColor: #1A3586,
+    backgroundColorHover: #004481,
+    borderColor: #004481,
+    beforeColor: #004481,
+    textColor: #004481,
+    outlineBorderColor:#1A3586,
+    outlineTextColor:#1D66DA,
+    outlineHoverColor:#ffffff,
+    outlineBeforeColor:#1D66DA,
+    boxShadowColor:rgba(29,120,218,0.5)
+  ),
+  green: (
+    backgroundColor: #9ED761,
+    backgroundColorHover: #87CE32,
+    borderColor: #87CE32,
+    beforeColor: #87CE32,
+    textColor: #87CE32,
+    outlineBorderColor:#9ED761,
+    outlineTextColor:#9ED761,
+    outlineHoverColor:#ffffff,
+    outlineBeforeColor:#9ED761,
+    boxShadowColor:rgba(139,214,64,0.5)
+  ),
+  red: (
+    backgroundColor: #F33820,
+    backgroundColorHover: #EF1828,
+    borderColor: #EF1828,
+    beforeColor: #EF1828,
+    textColor: #EF1828,
+    outlineBorderColor:#F33820,
+    outlineTextColor:#F33820,
+    outlineHoverColor:#ffffff,
+    outlineBeforeColor:#F33820,
+    boxShadowColor:rgba(235,75,79,0.5)
+  ),
+  vaillant: (
+    backgroundColor: #00947E,
+    backgroundColorHover: #008874,
+    borderColor: #008874,
+    beforeColor: #008874,
+    textColor: #008874,
+    outlineBorderColor:#00947E,
+    outlineTextColor:#00947E,
+    outlineHoverColor:#ffffff,
+    outlineBeforeColor:#00947E,
+    boxShadowColor:rgba(0,148,126,0.5)
+  ),
+  saunier: (
+    backgroundColor: #E3364B,
+    backgroundColorHover: #d11a45,
+    borderColor: #d11a45,
+    beforeColor: #d11a45,
+    textColor: #d11a45,
+    outlineBorderColor:#E3364B,
+    outlineTextColor:#E3364B,
+    outlineHoverColor:#ffffff,
+    outlineBeforeColor:#E3364B,
+    boxShadowColor:rgba(227,54,75,0.5)
+  ),
+);
+
+@mixin colorify($colors) {
+  @each $color, $map in $colors {
+    .#{$color} & {
+      $color-map: () !global;
+      @each $key, $submap in $map {
+        $value: map-get(map-get($colors, $color), '#{$key}');
+        $color-map: map-merge($color-map, ($key: $value)) !global;
+      }
+      @content;
+      $color-map: null !global;
+    }
+  }
+}
+
+@function colored($key) {
+  @return map-get($color-map, $key);
+}
+
+
+$color-accent: rgba(255,102,0,0.6);;
+$color-accent-hover: darken($color-accent, 10%);
+$color-additional: #999999;
+$color-additional-hover: darken($color-additional, 10%);
+
+$color-yellow: #f6da6e;
+$color-yellow-hover: darken($color-yellow, 10%);
+
+$color-violet: #c88ffa;
+
+$color-red: #ff4861;
+$color-red-hover: darken($color-red, 10%);
+
+$color-blue: #70bbfd;
+$color-blue-hover: darken($color-blue, 10%);
+
+$color-orange: #ff6600;
+$color-orange-hover: darken($color-orange, 10%);
+
+$color-gray: #787985;
+$color-light-gray: #d8dfe9;
+
+$color-green: #b8e986;
+$color-green-hover: darken($color-green, 10%);
+
+
+$directions: (
+  ltr: (
+    direction: ltr,
+
+    right: right,
+    left: left,
+
+    margin-right: 'margin-right',
+    margin-left: 'margin-left',
+
+    padding-left: 'padding-left',
+    padding-right: 'padding-right',
+
+    border-top-left-radius: 'border-top-left-radius',
+    border-bottom-left-radius: 'border-bottom-left-radius',
+
+    border-top-right-radius: 'border-top-right-radius',
+    border-bottom-right-radius: 'border-bottom-right-radius',
+
+    border-left: 'border-left',
+    border-right: 'border-right',
+
+    translate: 'translate(-50%, -50%);',
+    mirrorY: 'scale(1, 1)',
+
+    border-right-color: 'border-right-color',
+
+    transform-sidebar: 'rotate(90deg)',
+
+    flex-flow: row nowrap,
+    row: 'row',
+
+    sidebar-close: translateX(0),
+    sidebar-no-desktop: translateX(calc(0%)),
+    '-': '-',
+  ),
+  rtl: (
+    direction: rtl,
+
+    right: left,
+    left: right,
+
+    margin-right: 'margin-left',
+    margin-left: 'margin-right',
+
+    padding-left: 'padding-right',
+    padding-right: 'padding-left',
+
+    border-top-left-radius: 'border-top-right-radius',
+    border-bottom-left-radius: 'border-bottom-right-radius',
+
+    border-top-right-radius: 'border-top-left-radius',
+    border-bottom-right-radius: 'border-bottom-left-radius',
+
+    border-left: 'border-right',
+    border-right: 'border-left',
+
+    translate: 'translate(50%, -50%);',
+    mirrorY: 'scale(1, -1)',
+
+    border-right-color: 'border-left-color',
+    transform-sidebar: 'rotate(-90deg)',
+
+    flex-flow: row-reverse nowrap,
+    row: 'row-reverse',
+
+    sidebar-close: translateX(0),
+    sidebar-no-desktop:  translateX(calc(100%)),
+    '-': '+',
+  )
+);
+
+@mixin directify($directions) {
+  @each $direction, $map in $directions {
+    .#{$direction}-support & {
+      $direction-map: () !global;
+      @each $key, $submap in $map {
+        $value: map-get(map-get($directions, $direction), '#{$key}');
+        $direction-map: map-merge($direction-map, ($key: $value)) !global;
+      }
+      @content;
+      $direction-map: null !global;
+    }
+  }
+}
+
+@function directed($key) {
+  @return map-get($direction-map, $key);
+}
