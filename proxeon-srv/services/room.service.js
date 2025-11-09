@@ -88,8 +88,6 @@ async function getLink(params, user) {
         // Generate join URL using bigbluebutton-js library
         url = api.administration.join(params.login, meeting.meetingID, password, joinOptions);
 
-        console.log('🔗 JOIN URL Generated (wait loop):', url);
-
         let users = await meetingService.getAttendees(room_wait.meetingID);
 
         let attendee = users.attendee;
@@ -131,9 +129,6 @@ async function getLink(params, user) {
 
   // Generate join URL using bigbluebutton-js library
   url = api.administration.join(params.login, meeting.meetingID, password, joinOptions);
-
-  console.log('🔗 JOIN URL Generated:', url);
-  console.log('🔧 Join options:', JSON.stringify(joinOptions, null, 2));
 
   return url;
 }

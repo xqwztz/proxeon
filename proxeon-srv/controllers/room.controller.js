@@ -44,13 +44,9 @@ function linkSchema(req, res, next) {
 }
 
 function getLink(req, res, next) {
-  console.log('🔗 create-link request:', JSON.stringify(req.body, null, 2));
-
   roomService
     .getLink(req.body, req.ip)
     .then((link) => {
-      console.log('✅ Link created successfully');
-      console.log('🔗 Join URL being sent to client:', link);
       res.json(link);
     })
     .catch((err) => {

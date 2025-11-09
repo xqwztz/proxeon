@@ -113,12 +113,8 @@ async function createMeeting(params) {
 
   // Dostosuj parametry do wersji BBB (usuń przestarzałe dla 3.0)
   createParams = await adaptCreateParameters(createParams);
-
-  console.log('🔍 Creating meeting with params:', JSON.stringify(createParams, null, 2));
   
   let meetingCreateUrl = api.administration.create(params.name, id, createParams);
-  
-  console.log('🔗 BBB API URL:', meetingCreateUrl);
 
   await axios({
     method: "post",
