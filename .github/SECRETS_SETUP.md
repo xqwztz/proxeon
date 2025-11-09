@@ -31,7 +31,7 @@ chmod 600 ~/.ssh/authorized_keys
 
 Przejdź do: **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 
-#### Wymagane Secrets:
+#### Wymagane Secrets (Production - main branch):
 
 | Secret Name | Opis | Przykład |
 |-------------|------|----------|
@@ -39,8 +39,17 @@ Przejdź do: **Settings** → **Secrets and variables** → **Actions** → **Ne
 | `SSH_HOST` | Host serwera mydevil.net | `s1.mydevil.net` |
 | `SSH_USER` | Nazwa użytkownika SSH | `twoj-login` |
 | `SSH_PORT` | Port SSH | `22` |
-| `DEPLOY_PATH_BACKEND` | Ścieżka do katalogu backendu | `/home/twoj-login/domains/meet.sqx.pl` |
-| `DEPLOY_PATH_FRONTEND` | Ścieżka do katalogu frontendu | `/home/twoj-login/domains/meet.sqx.pl/public_html` |
+| `DEPLOY_PATH_BACKEND` | Ścieżka do katalogu backendu (production) | `/home/twoj-login/domains/meet.sqx.pl` |
+| `DEPLOY_PATH_FRONTEND` | Ścieżka do katalogu frontendu (production) | `/home/twoj-login/domains/meet.sqx.pl/public_html` |
+
+#### Wymagane Secrets (Development - develop branch):
+
+| Secret Name | Opis | Przykład |
+|-------------|------|----------|
+| `DEPLOY_PATH_BACKEND_DEV` | Ścieżka do katalogu backendu (development) | `/home/twoj-login/domains/4meet.sqx.pl` |
+| `DEPLOY_PATH_FRONTEND_DEV` | Ścieżka do katalogu frontendu (development) | `/home/twoj-login/domains/4meet.sqx.pl/public_html` |
+
+**Uwaga:** Secrets SSH (`SSH_PRIVATE_KEY`, `SSH_HOST`, `SSH_USER`, `SSH_PORT`) są współdzielone między production i development.
 
 #### Opcjonalne Secrets (dla konfiguracji środowiska):
 

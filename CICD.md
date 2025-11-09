@@ -217,7 +217,46 @@ EMAIL_PASSWORD=twoje-haslo
 - Automatycznie po merge do `main`
 - Deployment produkcyjny
 
-### 2. manual-deploy.yml
+### 2. deploy-develop.yml
+
+**Trigger:** Automatyczny przy push do branch `develop`
+
+**Workflow:**
+```
+1. build-backend
+   - Checkout kodu
+   - Setup Node.js 20.x
+   - npm ci --production
+   - Upload artifacts
+
+2. build-frontend
+   - Checkout kodu
+   - Setup Node.js 20.x
+   - npm install
+   - Build z REACT_APP_SERVER_URL=https://4meet.sqx.pl
+   - Upload artifacts
+
+3. deploy
+   - Download artifacts
+   - Setup SSH
+   - Backup na serwerze (proxeon_dev_*)
+   - rsync backend do DEPLOY_PATH_BACKEND_DEV
+   - rsync frontend do DEPLOY_PATH_FRONTEND_DEV
+   - npm ci na serwerze
+   - Passenger restart
+   - Health check na https://4meet.sqx.pl/health
+```
+
+**Kiedy używać:**
+- Automatycznie po push do `develop`
+- Deployment środowiska deweloperskiego
+- Testowanie przed merge do `main`
+
+**Wymagane Secrets:**
+- `DEPLOY_PATH_BACKEND_DEV` - ścieżka do backendu (np. `/home/user/domains/4meet.sqx.pl`)
+- `DEPLOY_PATH_FRONTEND_DEV` - ścieżka do frontendu (np. `/home/user/domains/4meet.sqx.pl/public_html`)
+
+### 3. manual-deploy.yml
 
 **Trigger:** Manualny (workflow_dispatch)
 

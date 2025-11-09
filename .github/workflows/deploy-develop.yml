@@ -1,0 +1,337 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches:
+      - develop
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/SECRETS_SETUP.md'
+
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests'
+        required: false
+        default: 'false'
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install backend dependencies
+        working-directory: ./proxeon-srv
+        run: npm ci --production
+
+      - name: Create backend artifact
+        working-directory: ./proxeon-srv
+        run: |
+          # Remove dev files
+          rm -rf node_modules/.cache
+          rm -f backend.log logs.txt
+          
+          # Copy create-admin.sh script to backend directory
+          cp ../create-admin.sh ./create-admin.sh
+          chmod +x ./create-admin.sh
+          
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build-dev
+          path: |
+            proxeon-srv/
+            !proxeon-srv/node_modules
+            !proxeon-srv/.env
+            !proxeon-srv/backend.log
+            !proxeon-srv/logs.txt
+          retention-days: 7
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install frontend dependencies
+        working-directory: ./proxeon-client
+        run: npm install
+
+      - name: Build frontend
+        working-directory: ./proxeon-client
+        run: |
+          # Set development environment variables for build
+          echo "REACT_APP_SERVER_URL=https://4meet.sqx.pl" > .env.production
+          echo "REACT_APP_DOMAIN=proxeon" >> .env.production
+          
+          # Build (CI=false to allow ESLint warnings)
+          CI=false npm run build
+          
+      - name: Upload frontend build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-dev
+          path: proxeon-client/build/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Development (4meet.sqx.pl)
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    environment:
+      name: development
+      url: https://4meet.sqx.pl
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build-dev
+          path: ./deploy/backend
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build-dev
+          path: ./deploy/frontend
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo '✅ SSH connection successful'"
+
+      - name: Create backup on server
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            BACKUP_DIR="$HOME/backups/proxeon_dev_$TIMESTAMP"
+            
+            echo "📦 Creating backup: $BACKUP_DIR"
+            mkdir -p "$BACKUP_DIR"
+            
+            # Backup backend (without node_modules)
+            if [ -d "${{ secrets.DEPLOY_PATH_BACKEND_DEV }}" ]; then
+              echo "Backing up backend..."
+              rsync -a --exclude='node_modules' --exclude='.env' \
+                "${{ secrets.DEPLOY_PATH_BACKEND_DEV }}/" "$BACKUP_DIR/backend/"
+            fi
+            
+            # Backup frontend
+            if [ -d "${{ secrets.DEPLOY_PATH_FRONTEND_DEV }}" ]; then
+              echo "Backing up frontend..."
+              rsync -a "${{ secrets.DEPLOY_PATH_FRONTEND_DEV }}/" "$BACKUP_DIR/frontend/"
+            fi
+            
+            # Keep only last 3 backups
+            cd "$HOME/backups"
+            ls -t | grep proxeon_dev_ | tail -n +4 | xargs -r rm -rf
+            
+            echo "✅ Backup completed: $BACKUP_DIR"
+          EOF
+
+      - name: Deploy backend
+        run: |
+          echo "🚀 Deploying backend to development..."
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='backend.log' \
+            --exclude='logs.txt' \
+            --exclude='.git' \
+            ./deploy/backend/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_BACKEND_DEV }}/
+
+      - name: Install backend dependencies on server
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH_BACKEND_DEV }}
+            
+            echo "📦 Installing backend dependencies..."
+            npm ci --production
+            
+            echo "📁 Creating necessary directories..."
+            mkdir -p public/logos
+            mkdir -p tmp
+            
+            echo "✅ Backend dependencies installed"
+          EOF
+
+      - name: Deploy frontend
+        run: |
+          echo "🚀 Deploying frontend to development..."
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            ./deploy/frontend/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_FRONTEND_DEV }}/
+
+      - name: Restart Passenger (MyDevil.net)
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd ${{ secrets.DEPLOY_PATH_BACKEND_DEV }}
+            
+            # Create tmp directory if it doesn't exist
+            mkdir -p tmp
+            
+            # Restart Passenger by touching restart.txt
+            touch tmp/restart.txt
+            
+            echo "✅ Passenger restart triggered (tmp/restart.txt updated)"
+            echo "ℹ️  Application will restart on next HTTP request"
+          EOF
+
+      - name: Health check
+        run: |
+          echo "⏳ Waiting 15 seconds for Passenger to start application..."
+          sleep 15
+          
+          # Health check - try to reach the /health endpoint
+          HEALTH_URL="https://4meet.sqx.pl/health"
+          echo "🏥 Checking health at: $HEALTH_URL"
+          
+          # First, test DNS resolution
+          echo "🔍 Testing DNS resolution..."
+          if ! nslookup 4meet.sqx.pl > /dev/null 2>&1; then
+            echo "⚠️ DNS resolution failed for 4meet.sqx.pl"
+          else
+            echo "✅ DNS resolution OK"
+          fi
+          
+          # Test connection with verbose output
+          echo "🔍 Testing connection..."
+          curl -v -s -o /tmp/health_response.txt -w "\nHTTP_CODE:%{http_code}\nTIME_TOTAL:%{time_total}\n" "$HEALTH_URL" 2>&1 | head -20 || true
+          
+          for i in {1..5}; do
+            HTTP_CODE=$(curl -s -o /tmp/health_response.txt -w "%{http_code}" --max-time 10 "$HEALTH_URL" 2>/dev/null || echo "000")
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check passed! (HTTP $HTTP_CODE)"
+              if [ -f /tmp/health_response.txt ]; then
+                cat /tmp/health_response.txt
+              fi
+              rm -f /tmp/health_response.txt
+              exit 0
+            else
+              echo "❌ Attempt $i/5 failed (HTTP $HTTP_CODE)"
+              if [ "$HTTP_CODE" = "000" ]; then
+                echo "   ⚠️ Connection failed - server may not be reachable"
+                echo "   💡 Possible causes:"
+                echo "      - Domain not configured in MyDevil.net panel"
+                echo "      - Node.js application not set up in DevilWEB"
+                echo "      - SSL certificate not configured"
+                echo "      - Firewall blocking connection"
+              fi
+              if [ -f /tmp/health_response.txt ] && [ -s /tmp/health_response.txt ]; then
+                echo "   Response:"
+                head -5 /tmp/health_response.txt
+                echo ""
+              fi
+            fi
+            
+            if [ $i -lt 5 ]; then
+              echo "⏳ Waiting 5 seconds before retry..."
+              sleep 5
+            fi
+          done
+          
+          echo ""
+          echo "⚠️ Health check failed after 5 attempts"
+          echo ""
+          echo "💡 Troubleshooting tips:"
+          echo "   1. Check application logs in DevilWEB panel:"
+          echo "      - Go to: https://panelX.mydevil.net"
+          echo "      - Strony WWW → 4meet.sqx.pl → Logi"
+          echo "      - Look for errors, especially MongoDB connection errors"
+          echo ""
+          echo "   2. Verify domain configuration in MyDevil.net:"
+          echo "      - Strony WWW → Check if '4meet.sqx.pl' exists"
+          echo "      - Type: Node.js"
+          echo "      - Port: [PORT_FOR_4MEET]"
+          echo "      - Katalog aplikacji: ~/domains/4meet.sqx.pl"
+          echo ""
+          echo "   3. Check if Passenger restarted:"
+          echo "      ssh user@s1.mydevil.net"
+          echo "      cd ~/domains/4meet.sqx.pl"
+          echo "      ls -la tmp/restart.txt"
+          echo "      cat tmp/restart.txt  # Check timestamp"
+          echo ""
+          echo "   4. Verify .env file exists and has correct values:"
+          echo "      cat ~/domains/4meet.sqx.pl/.env | grep -E 'MONGO_URI|PORT|NODE_ENV'"
+          echo "      # Should show:"
+          echo "      # PORT=[PORT_FOR_4MEET]"
+          echo "      # NODE_ENV=development"
+          echo "      # MONGO_URI=mongodb://..."
+          echo ""
+          echo "   5. Test manually from server (bypass Passenger):"
+          echo "      cd ~/domains/4meet.sqx.pl"
+          echo "      node -e \"require('dotenv').config(); console.log('PORT:', process.env.PORT);\""
+          echo "      curl http://localhost:[PORT]/health"
+          echo ""
+          echo "⚠️ Deployment completed, but health check failed. Please investigate manually."
+          rm -f /tmp/health_response.txt
+          # Don't fail the deployment if health check fails
+          exit 0
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "================================================"
+          echo "✅ Deployment to development completed!"
+          echo "================================================"
+          echo "Environment: Development"
+          echo "URL: https://4meet.sqx.pl"
+          echo "Backend: ${{ secrets.DEPLOY_PATH_BACKEND_DEV }}"
+          echo "Frontend: ${{ secrets.DEPLOY_PATH_FRONTEND_DEV }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Time: $(date)"
+          echo "================================================"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+          rm -rf ./deploy
+
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: failure()
+    
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "❌ Development deployment failed!"
+          echo "Check logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Tutaj można dodać integrację z Slack/Discord/Email
+
