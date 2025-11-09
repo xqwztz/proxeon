@@ -93,9 +93,9 @@ jobs:
         run: |
           # Set environment-specific variables
           if [ "${{ inputs.environment }}" = "production" ]; then
-            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://api.meet.sqx.pl' }}" > .env.production
+            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://meet.sqx.pl' }}" > .env.production
           else
-            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL_STAGING || 'https://api.4meet.sqx.pl' }}" > .env.production
+            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL_STAGING || 'https://4meet.sqx.pl' }}" > .env.production
           fi
           echo "REACT_APP_DOMAIN=proxeon" >> .env.production
           
@@ -226,13 +226,13 @@ jobs:
           sleep 15
           
           # Health check - try to reach the /health endpoint
-          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://api.meet.sqx.pl' }}/health"
+          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://meet.sqx.pl' }}/health"
           echo "🏥 Checking health at: $HEALTH_URL"
           
           # First, test DNS resolution
           echo "🔍 Testing DNS resolution..."
-          if ! nslookup api.meet.sqx.pl > /dev/null 2>&1; then
-            echo "⚠️ DNS resolution failed for api.meet.sqx.pl"
+          if ! nslookup meet.sqx.pl > /dev/null 2>&1; then
+            echo "⚠️ DNS resolution failed for meet.sqx.pl"
           else
             echo "✅ DNS resolution OK"
           fi
@@ -280,19 +280,19 @@ jobs:
           echo "💡 Troubleshooting steps:"
           echo "   1. Verify domain is configured in MyDevil.net DevilWEB panel:"
           echo "      - Go to: https://panelX.mydevil.net"
-          echo "      - Strony WWW → Check if 'api.meet.sqx.pl' exists"
+          echo "      - Strony WWW → Check if 'meet.sqx.pl' exists"
           echo "      - Type: Node.js"
           echo "      - Port: 55984"
           echo ""
           echo "   2. Check if Passenger restarted:"
           echo "      ssh user@s1.mydevil.net"
-          echo "      cd ~/domains/api.meet.sqx.pl"
+          echo "      cd ~/domains/meet.sqx.pl"
           echo "      ls -la tmp/restart.txt"
           echo ""
           echo "   3. Check application logs in DevilWEB panel"
           echo ""
           echo "   4. Verify .env file:"
-          echo "      cat ~/domains/api.meet.sqx.pl/.env | grep -E 'MONGO_URI|PORT'"
+          echo "      cat ~/domains/meet.sqx.pl/.env | grep -E 'MONGO_URI|PORT'"
           echo ""
           echo "   5. Test manually from server:"
           echo "      curl http://localhost:55984/health"

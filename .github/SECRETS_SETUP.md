@@ -39,7 +39,7 @@ Przejdź do: **Settings** → **Secrets and variables** → **Actions** → **Ne
 | `SSH_HOST` | Host serwera mydevil.net | `s1.mydevil.net` |
 | `SSH_USER` | Nazwa użytkownika SSH | `twoj-login` |
 | `SSH_PORT` | Port SSH | `22` |
-| `DEPLOY_PATH_BACKEND` | Ścieżka do katalogu backendu | `/home/twoj-login/domains/api.meet.sqx.pl` |
+| `DEPLOY_PATH_BACKEND` | Ścieżka do katalogu backendu | `/home/twoj-login/domains/meet.sqx.pl` |
 | `DEPLOY_PATH_FRONTEND` | Ścieżka do katalogu frontendu | `/home/twoj-login/domains/meet.sqx.pl/public_html` |
 
 #### Opcjonalne Secrets (dla konfiguracji środowiska):

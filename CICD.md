@@ -109,7 +109,7 @@ Przejdź do: **Repository Settings** → **Secrets and variables** → **Actions
 | `SSH_HOST` | Host serwera | `s1.mydevil.net` |
 | `SSH_USER` | Login SSH | `twoj-login` |
 | `SSH_PORT` | Port SSH | `22` |
-| `DEPLOY_PATH_BACKEND` | Ścieżka backendu | `/home/user/domains/api.meet.sqx.pl` |
+| `DEPLOY_PATH_BACKEND` | Ścieżka backendu | `/home/user/domains/meet.sqx.pl` |
 | `DEPLOY_PATH_FRONTEND` | Ścieżka frontendu | `/home/user/domains/meet.sqx.pl/public_html` |
 
 #### Opcjonalne Secrets:
@@ -126,11 +126,11 @@ Przejdź do: **Repository Settings** → **Secrets and variables** → **Actions
 ssh user@s1.mydevil.net
 
 # Utwórz katalogi
-mkdir -p ~/domains/api.meet.sqx.pl
+mkdir -p ~/domains/meet.sqx.pl
 mkdir -p ~/domains/meet.sqx.pl/public_html
 
 # Dla development (w przyszłości):
-# mkdir -p ~/domains/api.4meet.sqx.pl
+# mkdir -p ~/domains/4meet.sqx.pl
 # mkdir -p ~/domains/4meet.sqx.pl/public_html
 mkdir -p ~/backups
 
@@ -142,14 +142,14 @@ ssh user@s1.mydevil.net "chmod +x ~/scripts/*.sh"
 npm install -g pm2
 
 # Upewnij się że .env jest skonfigurowany w katalogu backendu
-cd ~/domains/api.meet.sqx.pl
+cd ~/domains/meet.sqx.pl
 cp env.local .env
 nano .env  # Skonfiguruj zmienne
 ```
 
 ### 4. Konfiguracja .env na serwerze
 
-Plik `/home/user/domains/api.meet.sqx.pl/.env`:
+Plik `/home/user/domains/meet.sqx.pl/.env`:
 
 ```env
 # Port zarezerwowany w MyDevil.net dla meet.sqx.pl
@@ -437,7 +437,7 @@ rsync -av "$BACKUP_DIR/backend/" ~/domains/api.proxeon.pl/
 rsync -av "$BACKUP_DIR/frontend/" ~/domains/proxeon.pl/public_html/
 
 # Restart PM2
-cd ~/domains/api.meet.sqx.pl
+cd ~/domains/meet.sqx.pl
 npm ci --production
 pm2 restart proxeon-backend
 ```
@@ -538,7 +538,7 @@ PM2 process 'proxeon-backend' not found
 **Rozwiązanie:**
 ```bash
 # Na serwerze
-cd ~/domains/api.meet.sqx.pl
+cd ~/domains/meet.sqx.pl
 pm2 start app.js --name proxeon-backend
 pm2 save
 pm2 startup  # Konfiguruj autostart
@@ -613,7 +613,7 @@ Error: Cannot find module 'xyz'
 
 **Rozwiązanie:**
 ```bash
-cd ~/domains/api.meet.sqx.pl
+cd ~/domains/meet.sqx.pl
 rm -rf node_modules package-lock.json
 npm ci --production
 pm2 restart proxeon-backend

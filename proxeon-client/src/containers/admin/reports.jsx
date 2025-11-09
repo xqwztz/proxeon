@@ -43,14 +43,14 @@ const AdminReports = (props) => {
     }
 
     const records = recordingsData.map(function (item, index) {
-      return (
-        <ReportsTable
-          recording={item}
-          key={index}
+          return (
+            <ReportsTable
+              recording={item}
+              key={index}
           url={downloadUrl}
-        />
-      );
-    });
+            />
+          );
+        });
     setRecordings(records);
   };
 

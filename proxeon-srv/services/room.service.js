@@ -443,7 +443,7 @@ async function checkBBBStatus() {
         error: versionInfo.error,
         url: process.env.BBB_URL
       };
-    }
+  }
   } catch (error) {
     return {
       status: false,
