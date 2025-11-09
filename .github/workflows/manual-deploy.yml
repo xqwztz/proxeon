@@ -163,15 +163,27 @@ jobs:
             echo "📦 Creating backup: $BACKUP_DIR"
             mkdir -p "$BACKUP_DIR"
             
-            if [ "${{ inputs.deploy_backend }}" = "true" ] && [ -d "${{ secrets.DEPLOY_PATH_BACKEND }}" ]; then
-              echo "Backing up backend..."
-              rsync -a --exclude='node_modules' --exclude='.env' \
-                "${{ secrets.DEPLOY_PATH_BACKEND }}/" "$BACKUP_DIR/backend/"
+            if [ "${{ inputs.deploy_backend }}" = "true" ]; then
+              if [ "${{ inputs.environment }}" = "production" ] && [ -d "${{ secrets.DEPLOY_PATH_BACKEND }}" ]; then
+                echo "Backing up backend..."
+                rsync -a --exclude='node_modules' --exclude='.env' \
+                  "${{ secrets.DEPLOY_PATH_BACKEND }}/" "$BACKUP_DIR/backend/"
+              elif [ "${{ inputs.environment }}" = "staging" ] && [ -d "${{ secrets.DEPLOY_PATH_BACKEND_DEV }}" ]; then
+                echo "Backing up backend..."
+                rsync -a --exclude='node_modules' --exclude='.env' \
+                  "${{ secrets.DEPLOY_PATH_BACKEND_DEV }}/" "$BACKUP_DIR/backend/"
+              fi
             fi
             
-            if [ "${{ inputs.deploy_frontend }}" = "true" ] && [ -d "${{ secrets.DEPLOY_PATH_FRONTEND }}" ]; then
-              echo "Backing up frontend..."
-              rsync -a "${{ secrets.DEPLOY_PATH_FRONTEND }}/" "$BACKUP_DIR/frontend/"
+            # Backup frontend (from static directory)
+            if [ "${{ inputs.deploy_frontend }}" = "true" ]; then
+              if [ "${{ inputs.environment }}" = "production" ] && [ -d "${{ secrets.DEPLOY_PATH_BACKEND }}/static" ]; then
+                echo "Backing up frontend..."
+                rsync -a "${{ secrets.DEPLOY_PATH_BACKEND }}/static/" "$BACKUP_DIR/frontend/"
+              elif [ "${{ inputs.environment }}" = "staging" ] && [ -d "${{ secrets.DEPLOY_PATH_BACKEND_DEV }}/static" ]; then
+                echo "Backing up frontend..."
+                rsync -a "${{ secrets.DEPLOY_PATH_BACKEND_DEV }}/static/" "$BACKUP_DIR/frontend/"
+              fi
             fi
             
             echo "✅ Backup completed: $BACKUP_DIR"
@@ -181,6 +193,12 @@ jobs:
         if: ${{ inputs.deploy_backend }}
         run: |
           echo "🚀 Deploying backend..."
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH_BACKEND }}"
+          else
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH_BACKEND_DEV }}"
+          fi
+          
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             --exclude='node_modules' \
@@ -189,13 +207,14 @@ jobs:
             --exclude='logs.txt' \
             --exclude='.git' \
             ./deploy/backend/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_BACKEND }}/
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_PATH/
           
-          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ${{ secrets.DEPLOY_PATH_BACKEND }}
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+            cd $DEPLOY_PATH
             echo "📦 Installing backend dependencies..."
             npm ci --production
             mkdir -p public/logos
+            mkdir -p static
             echo "✅ Backend deployed"
           EOF
 
@@ -203,18 +222,30 @@ jobs:
         if: ${{ inputs.deploy_frontend }}
         run: |
           echo "🚀 Deploying frontend..."
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH_BACKEND }}/static"
+          else
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH_BACKEND_DEV }}/static"
+          fi
+          
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             ./deploy/frontend/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_FRONTEND }}/
-          echo "✅ Frontend deployed"
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$DEPLOY_PATH/
+          echo "✅ Frontend deployed to $DEPLOY_PATH"
 
       - name: Restart Passenger
         if: ${{ inputs.deploy_backend && inputs.restart_passenger }}
         run: |
           echo "🔄 Restarting Passenger (MyDevil.net)..."
-          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ${{ secrets.DEPLOY_PATH_BACKEND }}
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH_BACKEND }}"
+          else
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH_BACKEND_DEV }}"
+          fi
+          
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+            cd $DEPLOY_PATH
             
             # Create tmp directory if it doesn't exist
             mkdir -p tmp
@@ -233,13 +264,22 @@ jobs:
           sleep 15
           
           # Health check - try to reach the /health endpoint
-          HEALTH_URL="https://meet.sqx.pl/health"
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            HEALTH_URL="https://meet.sqx.pl/health"
+            DOMAIN="meet.sqx.pl"
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH_BACKEND }}"
+          else
+            HEALTH_URL="https://4meet.sqx.pl/health"
+            DOMAIN="4meet.sqx.pl"
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH_BACKEND_DEV }}"
+          fi
+          
           echo "🏥 Checking health at: $HEALTH_URL"
           
           # First, test DNS resolution
           echo "🔍 Testing DNS resolution..."
-          if ! nslookup meet.sqx.pl > /dev/null 2>&1; then
-            echo "⚠️ DNS resolution failed for meet.sqx.pl"
+          if ! nslookup $DOMAIN > /dev/null 2>&1; then
+            echo "⚠️ DNS resolution failed for $DOMAIN"
           else
             echo "✅ DNS resolution OK"
           fi
@@ -287,22 +327,22 @@ jobs:
           echo "💡 Troubleshooting steps:"
           echo "   1. Verify domain is configured in MyDevil.net DevilWEB panel:"
           echo "      - Go to: https://panelX.mydevil.net"
-          echo "      - Strony WWW → Check if 'meet.sqx.pl' exists"
+          echo "      - Strony WWW → Check if '$DOMAIN' exists"
           echo "      - Type: Node.js"
-          echo "      - Port: 55984"
+          echo "      - Port: [PORT]"
           echo ""
           echo "   2. Check if Passenger restarted:"
           echo "      ssh user@s1.mydevil.net"
-          echo "      cd ~/domains/meet.sqx.pl"
+          echo "      cd $DEPLOY_PATH"
           echo "      ls -la tmp/restart.txt"
           echo ""
           echo "   3. Check application logs in DevilWEB panel"
           echo ""
           echo "   4. Verify .env file:"
-          echo "      cat ~/domains/meet.sqx.pl/.env | grep -E 'MONGO_URI|PORT'"
+          echo "      cat $DEPLOY_PATH/.env | grep -E 'MONGO_URI|PORT'"
           echo ""
           echo "   5. Test manually from server:"
-          echo "      curl http://localhost:55984/health"
+          echo "      curl http://localhost:[PORT]/health"
           echo ""
           echo "⚠️ Deployment completed, but health check failed. Please investigate manually."
           rm -f /tmp/health_response.txt

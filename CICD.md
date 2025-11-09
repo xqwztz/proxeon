@@ -206,10 +206,10 @@ EMAIL_PASSWORD=twoje-haslo
    - Download artifacts
    - Setup SSH
    - Backup na serwerze
-   - rsync backend
-   - rsync frontend
+   - rsync backend do DEPLOY_PATH_BACKEND
+   - rsync frontend do DEPLOY_PATH_BACKEND/static
    - npm ci na serwerze
-   - PM2 reload
+   - Passenger restart
    - Health check
 ```
 
@@ -241,7 +241,7 @@ EMAIL_PASSWORD=twoje-haslo
    - Setup SSH
    - Backup na serwerze (proxeon_dev_*)
    - rsync backend do DEPLOY_PATH_BACKEND_DEV
-   - rsync frontend do DEPLOY_PATH_FRONTEND_DEV
+   - rsync frontend do DEPLOY_PATH_BACKEND_DEV/static
    - npm ci na serwerze
    - Passenger restart
    - Health check na https://4meet.sqx.pl/health
@@ -254,7 +254,7 @@ EMAIL_PASSWORD=twoje-haslo
 
 **Wymagane Secrets:**
 - `DEPLOY_PATH_BACKEND_DEV` - ścieżka do backendu (np. `/home/user/domains/4meet.sqx.pl`)
-- `DEPLOY_PATH_FRONTEND_DEV` - ścieżka do frontendu (np. `/home/user/domains/4meet.sqx.pl/public_html`)
+- Frontend jest deployowany do `DEPLOY_PATH_BACKEND_DEV/static` - nie wymaga osobnego secret
 
 ### 3. manual-deploy.yml
 

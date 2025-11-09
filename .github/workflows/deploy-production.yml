@@ -145,10 +145,10 @@ jobs:
                 "${{ secrets.DEPLOY_PATH_BACKEND }}/" "$BACKUP_DIR/backend/"
             fi
             
-            # Backup frontend
-            if [ -d "${{ secrets.DEPLOY_PATH_FRONTEND }}" ]; then
+            # Backup frontend (from static directory)
+            if [ -d "${{ secrets.DEPLOY_PATH_BACKEND }}/static" ]; then
               echo "Backing up frontend..."
-              rsync -a "${{ secrets.DEPLOY_PATH_FRONTEND }}/" "$BACKUP_DIR/frontend/"
+              rsync -a "${{ secrets.DEPLOY_PATH_BACKEND }}/static/" "$BACKUP_DIR/frontend/"
             fi
             
             # Keep only last 3 backups
@@ -184,17 +184,18 @@ jobs:
             
             echo "Creating necessary directories..."
             mkdir -p public/logos
+            mkdir -p static
             
             echo "Backend dependencies installed"
           EOF
 
       - name: Deploy frontend
         run: |
-          # Deploy frontend static files
+          # Deploy frontend static files to static directory
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             ./deploy/frontend/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_FRONTEND }}/
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_BACKEND }}/static/
 
       - name: Restart Passenger (MyDevil.net)
         run: |
@@ -313,7 +314,7 @@ jobs:
           echo "✅ Deployment to production completed!"
           echo "================================================"
           echo "Backend: ${{ secrets.DEPLOY_PATH_BACKEND }}"
-          echo "Frontend: ${{ secrets.DEPLOY_PATH_FRONTEND }}"
+          echo "Frontend: ${{ secrets.DEPLOY_PATH_BACKEND }}/static"
           echo "Commit: ${{ github.sha }}"
           echo "Branch: ${{ github.ref_name }}"
           echo "Time: $(date)"
