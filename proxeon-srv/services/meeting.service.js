@@ -261,6 +261,16 @@ async function getAllRecordings(){
 	await http(url).then((res) => {
 		recordings = res.recordings.recording;
   });
+  
+  // Sort recordings by startTime (newest first)
+  if (Array.isArray(recordings)) {
+    recordings.sort((a, b) => {
+      const timeA = parseInt(a.startTime) || 0;
+      const timeB = parseInt(b.startTime) || 0;
+      return timeB - timeA; // Descending order (newest first)
+    });
+  }
+  
   recordings = {
     recordings: recordings,
     BBB_DOWNLOAD_URL: process.env.BBB_DOWNLOAD_URL
