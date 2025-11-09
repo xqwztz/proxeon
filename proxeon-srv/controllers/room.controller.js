@@ -44,10 +44,18 @@ function linkSchema(req, res, next) {
 }
 
 function getLink(req, res, next) {
+  console.log('🔗 create-link request:', JSON.stringify(req.body, null, 2));
+  
   roomService
     .getLink(req.body, req.ip)
-    .then((link) => res.json(link))
-    .catch(next);
+    .then((link) => {
+      console.log('✅ Link created successfully');
+      res.json(link);
+    })
+    .catch((err) => {
+      console.error('❌ Error in getLink:', err);
+      next(err);
+    });
 }
 
 function meetingEnded(req, res, next) {
