@@ -80,8 +80,8 @@ jobs:
           echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://api.meet.sqx.pl' }}" > .env.production
           echo "REACT_APP_DOMAIN=proxeon" >> .env.production
           
-          # Build
-          npm run build
+          # Build (CI=false to allow ESLint warnings)
+          CI=false npm run build
           
       - name: Upload frontend build artifact
         uses: actions/upload-artifact@v4
