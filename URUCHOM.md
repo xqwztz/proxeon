@@ -1,6 +1,8 @@
 # 🚀 Uruchomienie aplikacji Proxeon
 
-## ⚡ Szybkie uruchomienie
+> **💡 Szukasz instrukcji instalacji na serwerze?** Zobacz: [DEPLOYMENT.md](DEPLOYMENT.md)
+
+## ⚡ Szybkie uruchomienie (lokalne)
 
 ### Krok 1: Przygotuj pliki .env
 
@@ -122,6 +124,14 @@ kill -9 PID
 - [ ] Uruchomić backend: `node app.js`
 - [ ] Uruchomić frontend: `npm start`
 - [ ] Otworzyć http://localhost:3000
+
+---
+
+## 📚 Dodatkowe dokumenty:
+
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Instalacja na serwerze produkcyjnym
+- **[BBB_3.0_CHANGES.md](BBB_3.0_CHANGES.md)** - Zmiany w BigBlueButton 3.0
+- **[BBB_MP4_SETUP.md](BBB_MP4_SETUP.md)** - Konfiguracja MP4 na BBB
 
 ---
 
