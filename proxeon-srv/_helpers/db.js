@@ -1,8 +1,18 @@
-const config = require('config.json');
 const mongoose = require('mongoose');
 
 // Use MONGO_URI from .env if available (production), otherwise use config.json (development)
-const connectionString = process.env.MONGO_URI || config.connectionString;
+// config.json is optional - only used as fallback
+let connectionString = process.env.MONGO_URI;
+
+if (!connectionString) {
+    // Try to load from config.json as fallback (for development)
+    try {
+        const config = require('config.json');
+        connectionString = config.connectionString;
+    } catch (e) {
+        // config.json doesn't exist or can't be loaded
+    }
+}
 
 if (!connectionString) {
     throw new Error('MongoDB connection string not found! Set MONGO_URI in .env or connectionString in config.json');
