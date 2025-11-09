@@ -222,22 +222,46 @@ jobs:
       - name: Health check
         if: ${{ inputs.deploy_backend }}
         run: |
-          echo "⏳ Waiting 10 seconds..."
-          sleep 10
+          echo "⏳ Waiting 15 seconds for Passenger to start application..."
+          sleep 15
           
-          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://api.meet.sqx.pl' }}"
-          echo "🏥 Health check: $HEALTH_URL"
+          # Health check - try to reach the /health endpoint
+          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://api.meet.sqx.pl' }}/health"
+          echo "🏥 Checking health at: $HEALTH_URL"
           
           for i in {1..5}; do
-            if curl -f -s -o /dev/null "$HEALTH_URL"; then
-              echo "✅ Health check passed!"
+            HTTP_CODE=$(curl -s -o /tmp/health_response.txt -w "%{http_code}" "$HEALTH_URL" || echo "000")
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check passed! (HTTP $HTTP_CODE)"
+              cat /tmp/health_response.txt
+              rm -f /tmp/health_response.txt
               exit 0
+            else
+              echo "❌ Attempt $i/5 failed (HTTP $HTTP_CODE)"
+              if [ -f /tmp/health_response.txt ]; then
+                echo "Response:"
+                cat /tmp/health_response.txt
+                echo ""
+              fi
             fi
-            echo "Attempt $i/5..."
-            sleep 5
+            
+            if [ $i -lt 5 ]; then
+              echo "⏳ Waiting 5 seconds before retry..."
+              sleep 5
+            fi
           done
           
-          echo "⚠️ Health check failed"
+          echo ""
+          echo "⚠️ Health check failed after 5 attempts"
+          echo "💡 Troubleshooting tips:"
+          echo "   1. Check if Passenger restarted: ssh to server and check tmp/restart.txt"
+          echo "   2. Check application logs in DevilWEB panel"
+          echo "   3. Verify .env file has correct MONGO_URI and PORT=55984"
+          echo "   4. Test manually: curl $HEALTH_URL"
+          echo ""
+          echo "⚠️ Deployment completed, but health check failed. Please investigate manually."
+          rm -f /tmp/health_response.txt
           exit 0
 
       - name: Deployment summary

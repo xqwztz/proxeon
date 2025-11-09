@@ -45,6 +45,14 @@ app.use(
 //
 app.use("/", express.static("static"));
 
+// Health check endpoint for CI/CD
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
 
 app.get("/getLogoName/:id?", async function (req, res) {
   if (req.params.id) {
