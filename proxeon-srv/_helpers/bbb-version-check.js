@@ -60,6 +60,9 @@ async function checkBBBVersion(bbbUrl = null) {
       console.log('✅ BBB version is up to date and compatible\n');
     }
 
+    // Określ główną wersję API (2.x lub 3.x)
+    const majorVersion = getMajorVersion(version);
+    
     return {
       success: true,
       version,
@@ -67,7 +70,8 @@ async function checkBBBVersion(bbbUrl = null) {
       build,
       url: bbbUrl,
       warnings,
-      isSupported: warnings.length === 0
+      isSupported: warnings.length === 0,
+      majorVersion  // 2 lub 3
     };
 
   } catch (error) {
@@ -136,10 +140,15 @@ function analyzeVersion(version) {
     }
     // BBB 2.7+
     else if (major === 2 && minor >= 7) {
-      // Wszystko OK - najnowsza wersja
+      // Wszystko OK - najnowsza wersja 2.x
     }
-    // Przyszłe wersje (2.8+, 3.0)
-    else if (major >= 3 || (major === 2 && minor >= 8)) {
+    // BBB 3.0+
+    else if (major === 3) {
+      console.log(`🎉 BBB ${version} - Latest version with new features!`);
+      console.log('   ✅ Full API 3.0 support enabled');
+    }
+    // Przyszłe wersje (2.8+, 3.1+)
+    else if ((major === 2 && minor >= 8) || (major === 3 && minor >= 1)) {
       warnings.push(`ℹ️  BBB ${version} is newer than tested version`);
       warnings.push('   API compatibility should be maintained');
       warnings.push('   Test thoroughly before production use');
@@ -172,9 +181,66 @@ async function isBBBServerAlive(bbbUrl = null) {
   }
 }
 
+/**
+ * Pobiera główną wersję BBB (2 lub 3)
+ * 
+ * @param {string} version - Wersja BBB (np. "3.0.1")
+ * @returns {number} Główna wersja (2 lub 3)
+ */
+function getMajorVersion(version) {
+  if (!version || version === 'unknown') {
+    return 2; // Domyślnie załóż BBB 2.x dla bezpieczeństwa
+  }
+  
+  try {
+    const major = parseInt(version.split('.')[0]);
+    return major >= 3 ? 3 : 2;
+  } catch (error) {
+    return 2;
+  }
+}
+
+/**
+ * Globalny cache wersji BBB
+ */
+let cachedBBBVersion = null;
+
+/**
+ * Pobiera aktualną wersję BBB (z cache lub sprawdza server)
+ * 
+ * @returns {Promise<number>} Główna wersja BBB (2 lub 3)
+ */
+async function getBBBMajorVersion() {
+  // Jeśli mamy cache, użyj go
+  if (cachedBBBVersion !== null) {
+    return cachedBBBVersion;
+  }
+
+  // Sprawdź serwer
+  const versionInfo = await checkBBBVersion();
+  if (versionInfo.success && versionInfo.majorVersion) {
+    cachedBBBVersion = versionInfo.majorVersion;
+    return cachedBBBVersion;
+  }
+
+  // Jeśli nie udało się sprawdzić, załóż BBB 2.x
+  cachedBBBVersion = 2;
+  return cachedBBBVersion;
+}
+
+/**
+ * Czyści cache wersji BBB (użyj przy zmianie serwera)
+ */
+function clearVersionCache() {
+  cachedBBBVersion = null;
+}
+
 module.exports = {
   checkBBBVersion,
   analyzeVersion,
-  isBBBServerAlive
+  isBBBServerAlive,
+  getMajorVersion,
+  getBBBMajorVersion,
+  clearVersionCache
 };
 

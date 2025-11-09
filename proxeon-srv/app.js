@@ -20,9 +20,13 @@ const sha1 = require("sha1");
 
 // Sprawdź wersję BigBlueButton przy starcie
 const { checkBBBVersion } = require("_helpers/bbb-version-check");
-checkBBBVersion().catch(error => {
-  console.error('Failed to check BBB version:', error);
-});
+const { logAPIChanges } = require("_helpers/bbb-api-adapter");
+
+checkBBBVersion()
+  .then(() => logAPIChanges())
+  .catch(error => {
+    console.error('Failed to check BBB version:', error);
+  });
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());

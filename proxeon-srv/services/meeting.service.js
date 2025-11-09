@@ -9,6 +9,7 @@ const io = server.passSocket();
 var generator = require("generate-password");
 const axios = require("axios");
 var convert = require("xml-js");
+const { adaptCreateParameters, validateCreateParameters } = require("_helpers/bbb-api-adapter");
 
 module.exports = {
   getMeetings,
@@ -82,7 +83,8 @@ async function createMeeting(params) {
   let recording_callback =
     "https://" + process.env.DOMAIN + ".pl/meetings/recordingReady";
 
-  let meetingCreateUrl = api.administration.create(params.name, id, {
+  // Przygotuj podstawowe parametry create
+  let createParams = {
     record: true,
     allowStartStopRecording: true,
     attendeePW: user_passw,
@@ -92,7 +94,19 @@ async function createMeeting(params) {
     ["meta_bbb-recording-ready-url"]: recording_callback,
     muteOnStart: params.mute_on_start,
     guestPolicy: guest_policy,
-  });
+  };
+
+  // Waliduj i dostosuj parametry do wersji BBB
+  const validation = await validateCreateParameters(createParams);
+  if (validation.warnings.length > 0) {
+    console.log('⚠️  BBB API Warnings:');
+    validation.warnings.forEach(w => console.log(`   ${w}`));
+  }
+
+  // Dostosuj parametry do wersji BBB (usuń przestarzałe dla 3.0)
+  createParams = await adaptCreateParameters(createParams);
+
+  let meetingCreateUrl = api.administration.create(params.name, id, createParams);
 
   await axios({
     method: "post",
