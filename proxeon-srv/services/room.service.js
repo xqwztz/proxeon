@@ -27,6 +27,9 @@ module.exports = {
 };
 
 async function getLink(params, user) {
+  // Initialize BBB API
+  let api = bbb.api(process.env.BBB_URL, process.env.BBB_SECRET);
+  
   let meeting;
   let room_old, room;
 
@@ -61,9 +64,6 @@ async function getLink(params, user) {
   }
 
   let url = "";
-  let request = "";
-
-  params.login = encodeURI(params.login);
 
   if (!room.meetingID && !room.user_start_meeting && params.type === "usr") {
     const check = setInterval(async () => {
@@ -71,60 +71,24 @@ async function getLink(params, user) {
       if (room_wait.meetingID) {
         meeting = await db.Meeting.findOne({ meetingID: room_wait.meetingID });
 
-        if (params.type === "mod") {
-          url =
-            process.env.BBB_URL +
-            "api/join?meetingID=" +
-            meeting.meetingID +
-            "&password=" +
-            meeting.admin_passw +
-            "&fullName=" +
-            params.login;
-          request =
-            "joinmeetingID=" +
-            meeting.meetingID +
-            "&password=" +
-            meeting.admin_passw +
-            "&fullName=" +
-            params.login;
-        } else if (params.type === "usr") {
-          url =
-            process.env.BBB_URL +
-            "api/join?meetingID=" +
-            meeting.meetingID +
-            "&password=" +
-            meeting.user_passw +
-            "&fullName=" +
-            params.login;
-          request =
-            "joinmeetingID=" +
-            meeting.meetingID +
-            "&password=" +
-            meeting.user_passw +
-            "&fullName=" +
-            params.login;
+        // Build join options using bigbluebutton-js
+        const password = params.type === "mod" ? meeting.admin_passw : meeting.user_passw;
+        const joinOptions = {};
+
+        // Add guest parameter for regular users
+        if (params.type === "usr") {
+          joinOptions.guest = true;
         }
 
+        // Add custom style for specific room
         if (room.id == "ovlM6w3-1") {
-          url +=
-            "&userdata-bbb_custom_style=" +
-            encodeURIComponent(
-              ":root{--loader-bg:#2a2a31;}.overlay--1aTlbi{background-color:#2a2a31!important;}body{background-color:#2a2a31!important;}.primary--1IbqAO{background-color:#fe5500!important}.primary--1IbqAO>i::before{color:white!important}"
-            );
-          request +=
-            "&userdata-bbb_custom_style=" +
-            encodeURIComponent(
-              ":root{--loader-bg:#2a2a31;}.overlay--1aTlbi{background-color:#2a2a31!important;}body{background-color:#2a2a31!important;}.primary--1IbqAO{background-color:#fe5500!important}.primary--1IbqAO>i::before{color:white!important}"
-            );
+          joinOptions["userdata-bbb_custom_style"] = ":root{--loader-bg:#2a2a31;}.overlay--1aTlbi{background-color:#2a2a31!important;}body{background-color:#2a2a31!important;}.primary--1IbqAO{background-color:#fe5500!important}.primary--1IbqAO>i::before{color:white!important}";
         }
 
-        let sha = request + process.env.BBB_SECRET;
-        sha = sha1(sha);
-        url += "&checksum=" + sha;
+        // Generate join URL using bigbluebutton-js library
+        url = api.administration.join(params.login, meeting.meetingID, password, joinOptions);
 
         console.log('🔗 JOIN URL Generated (wait loop):', url);
-        console.log('🔑 Join request string:', request);
-        console.log('🔐 Checksum:', sha);
 
         let users = await meetingService.getAttendees(room_wait.meetingID);
 
@@ -151,62 +115,25 @@ async function getLink(params, user) {
 
   meeting = await db.Meeting.findOne({ meetingID: room.meetingID });
 
-  if (params.type === "mod") {
-    url =
-      process.env.BBB_URL +
-      "api/join?meetingID=" +
-      meeting.meetingID +
-      "&password=" +
-      meeting.admin_passw +
-      "&fullName=" +
-      params.login;
-    request =
-      "joinmeetingID=" +
-      meeting.meetingID +
-      "&password=" +
-      meeting.admin_passw +
-      "&fullName=" +
-      params.login;
-  } else if (params.type === "usr") {
-    url =
-      process.env.BBB_URL +
-      "api/join?meetingID=" +
-      meeting.meetingID +
-      "&password=" +
-      meeting.user_passw +
-      "&fullName=" +
-      params.login +
-      "&guest=true";
-    request =
-      "joinmeetingID=" +
-      meeting.meetingID +
-      "&password=" +
-      meeting.user_passw +
-      "&fullName=" +
-      params.login +
-      "&guest=true";
+  // Build join options using bigbluebutton-js
+  const password = params.type === "mod" ? meeting.admin_passw : meeting.user_passw;
+  const joinOptions = {};
+
+  // Add guest parameter for regular users
+  if (params.type === "usr") {
+    joinOptions.guest = true;
   }
 
+  // Add custom style for specific room
   if (room.id == "ovlM6w3-1") {
-    url +=
-      "&userdata-bbb_custom_style=" +
-      encodeURIComponent(
-        ":root{--loader-bg:#2a2a31;}.overlay--1aTlbi{background-color:#2a2a31!important;}body{background-color:#2a2a31!important;}.primary--1IbqAO{background-color:#fe5500!important}.primary--1IbqAO>i::before{color:white!important}"
-      );
-    request +=
-      "&userdata-bbb_custom_style=" +
-      encodeURIComponent(
-        ":root{--loader-bg:#2a2a31;}.overlay--1aTlbi{background-color:#2a2a31!important;}body{background-color:#2a2a31!important;}.primary--1IbqAO{background-color:#fe5500!important}.primary--1IbqAO>i::before{color:white!important}"
-      );
+    joinOptions["userdata-bbb_custom_style"] = ":root{--loader-bg:#2a2a31;}.overlay--1aTlbi{background-color:#2a2a31!important;}body{background-color:#2a2a31!important;}.primary--1IbqAO{background-color:#fe5500!important}.primary--1IbqAO>i::before{color:white!important}";
   }
 
-  let sha = request + process.env.BBB_SECRET;
-  sha = sha1(sha);
-  url += "&checksum=" + sha;
+  // Generate join URL using bigbluebutton-js library
+  url = api.administration.join(params.login, meeting.meetingID, password, joinOptions);
 
   console.log('🔗 JOIN URL Generated:', url);
-  console.log('🔑 Join request string:', request);
-  console.log('🔐 Checksum:', sha);
+  console.log('🔧 Join options:', JSON.stringify(joinOptions, null, 2));
 
   return url;
 }
