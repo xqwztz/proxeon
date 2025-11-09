@@ -52,7 +52,7 @@ class Topbar extends PureComponent {
               <Link style={{ "backgroundImage": "url('" + process.env.REACT_APP_SERVER_URL + "/getLogo/" + this.state.logoName + "'" }} className="topbar__logo" to="/" />
               : null}
             {isDevelopment && (
-              <span className="topbar__dev-badge">DEVELOPMENT</span>
+              <span className="topbar__dev-badge">BETA</span>
             )}
           </div>
           <div className="topbar__right">

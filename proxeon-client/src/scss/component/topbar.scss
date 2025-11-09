@@ -68,26 +68,16 @@
 .topbar__dev-badge {
   display: inline-flex;
   align-items: center;
-  margin-left: 15px;
-  padding: 4px 12px;
-  background-color: #ff6b6b;
-  color: white;
-  font-size: 11px;
-  font-weight: 700;
+  margin-left: 12px;
+  padding: 2px 8px;
+  background-color: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+  font-size: 10px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  animation: pulse 2s infinite;
-  
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.8;
-    }
-  }
+  border-radius: 3px;
+  border: 1px solid rgba(255, 107, 107, 0.3);
 }
 
 .topbar__right {
