@@ -38,6 +38,11 @@ class Topbar extends PureComponent {
   render() {
 
     const user = accountService.userValue;
+    
+    // Check if we're on development environment (4meet.sqx.pl)
+    const isDevelopment = window.location.hostname === '4meet.sqx.pl' || 
+                         window.location.hostname.includes('localhost') ||
+                         process.env.NODE_ENV === 'development';
 
     return (
       <div className="topbar">
@@ -46,7 +51,9 @@ class Topbar extends PureComponent {
             {this.state.logo_loaded ?
               <Link style={{ "backgroundImage": "url('" + process.env.REACT_APP_SERVER_URL + "/getLogo/" + this.state.logoName + "'" }} className="topbar__logo" to="/" />
               : null}
-            
+            {isDevelopment && (
+              <span className="topbar__dev-badge">DEVELOPMENT</span>
+            )}
           </div>
           <div className="topbar__right">
           { user && user.role==="Admin" && <TopbarBBBStatus />}
