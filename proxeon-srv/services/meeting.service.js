@@ -92,6 +92,10 @@ async function createMeeting(params) {
     logoutURL = 'https://' + logoutURL;
   }
   
+  // Pobierz welcomeMessage z pokoju jeśli jest ustawione, w przeciwnym razie użyj domyślnego
+  const room = await db.Room.findOne({ id: params.roomID });
+  const welcomeMessage = (room && room.welcomeMessage) ? room.welcomeMessage : "Witaj!";
+  
   let createParams = {
     record: true,
     allowStartStopRecording: true,
@@ -102,7 +106,7 @@ async function createMeeting(params) {
     ["meta_bbb-recording-ready-url"]: recording_callback,
     muteOnStart: Boolean(params.mute_on_start), // Ensure boolean
     guestPolicy: guest_policy,
-    welcome: "Witaj!", // Domyślna wiadomość powitalna
+    welcome: welcomeMessage, // Wiadomość powitalna z pokoju lub domyślna
   };
 
   // Waliduj i dostosuj parametry do wersji BBB

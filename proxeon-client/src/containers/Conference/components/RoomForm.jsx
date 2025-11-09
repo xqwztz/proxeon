@@ -23,6 +23,7 @@ class RoomForm extends Component {
         user_start_meeting: false,
         join_as_moderator: false,
         accessCode: null,
+        welcomeMessage: "",
       },
       upload: false,
       file: null,
@@ -41,6 +42,7 @@ class RoomForm extends Component {
         accessCode: this.props.current.accessCode
           ? this.props.current.accessCode
           : null,
+        welcomeMessage: this.props.current.welcomeMessage || "",
       };
       this.setState({ form: form });
       this.getSlide();
@@ -52,6 +54,7 @@ class RoomForm extends Component {
         ask_moderator: false,
         user_start_meeting: false,
         accessCode: null,
+        welcomeMessage: "",
       };
       this.setState({ form: form, file: null });
       return;
@@ -60,6 +63,11 @@ class RoomForm extends Component {
   handleNameChange = (e) => {
     let old_state = this.state.form;
     old_state.name = e.target.value;
+    this.setState({ form: old_state });
+  };
+  handleWelcomeMessageChange = (e) => {
+    let old_state = this.state.form;
+    old_state.welcomeMessage = e.target.value;
     this.setState({ form: old_state });
   };
   handleMuteState = () => {
@@ -83,6 +91,11 @@ class RoomForm extends Component {
     let form = this.state.form;
 
     if (form.accessCode == null) delete form.accessCode;
+    
+    // Jeśli welcomeMessage jest puste, ustaw jako null (użyje domyślnego "Witaj!")
+    if (!form.welcomeMessage || form.welcomeMessage.trim() === "") {
+      form.welcomeMessage = null;
+    }
 
     this.props.handleSubmit(form);
   };
@@ -193,6 +206,19 @@ class RoomForm extends Component {
               >
                 <FontAwesomeIcon icon={faTrash} />
               </span>
+            </div>
+
+            <div className="input-icon mb-2">
+              <input
+                id="room-welcome-message"
+                className="form-control text-center"
+                value={this.state.form.welcomeMessage}
+                onChange={this.handleWelcomeMessageChange}
+                placeholder="Wiadomość powitalna (domyślnie: Witaj!)"
+                autoComplete="off"
+                type="text"
+                name="room[welcomeMessage]"
+              />
             </div>
 
             <label className="custom-switch pl-0 mt-3 mb-3 w-100 text-left d-inline-block ">

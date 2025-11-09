@@ -76,6 +76,7 @@ function createSchema(req, res, next) {
     mute_on_start: Joi.boolean().required(),
     ask_moderator: Joi.boolean().required(), //true-ask, false-always_accept
     accessCode: Joi.string(),
+    welcomeMessage: Joi.string().allow(null, "").empty(""),
   });
   validateRequest(req, next, schema);
 }
@@ -139,6 +140,7 @@ function updateSchema(req, res, next) {
     ask_moderator: Joi.boolean().empty(""),
     userID: Joi.string().required(),
     accessCode: Joi.string(),
+    welcomeMessage: Joi.string().allow(null, "").empty(""),
   };
 
   if (req.user.role === Role.Admin) {

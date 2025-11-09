@@ -247,6 +247,12 @@ async function update(id, params) {
     await db.Room.updateOne({ id: id }, { $unset: { accessCode: "" } });
   }
 
+  // Jeśli welcomeMessage jest null lub puste, usuń z pokoju (użyje domyślnego "Witaj!")
+  if (params.welcomeMessage === null || params.welcomeMessage === "") {
+    await db.Room.updateOne({ id: id }, { $unset: { welcomeMessage: "" } });
+    delete params.welcomeMessage;
+  }
+
   Object.assign(room, params);
 
   await room.save();

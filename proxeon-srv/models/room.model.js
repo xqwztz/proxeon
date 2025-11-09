@@ -14,7 +14,8 @@ const schema = new Schema({
     createDate:{type:Date, required:true},
     accessCode:{type:String, required:false},
     waitingForStart:{type: Boolean, required:false},
-    waitingForStartTimeStamp: {type: Date, required:false}
+    waitingForStartTimeStamp: {type: Date, required:false},
+    welcomeMessage:{type:String, required:false, default:null} // Domyślna wiadomość powitalna dla spotkania
 });
 
 schema.set('toJSON', {
