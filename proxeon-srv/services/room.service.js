@@ -422,14 +422,36 @@ async function checkRecordings(id, user) {
 }
 
 async function checkBBBStatus() {
-  const respond = { status: false };
-
-  const BBB_response = await fetch(process.env.BBB_URL);
-  if (BBB_response.status === 200) {
-    respond.status = true;
+  const { checkBBBVersion } = require("../_helpers/bbb-version-check");
+  
+  try {
+    const versionInfo = await checkBBBVersion();
+    
+    if (versionInfo.success) {
+      return {
+        status: true,
+        online: true,
+        version: versionInfo.version,
+        apiVersion: versionInfo.apiVersion,
+        majorVersion: versionInfo.majorVersion,
+        url: process.env.BBB_URL
+      };
+    } else {
+      return {
+        status: false,
+        online: false,
+        error: versionInfo.error,
+        url: process.env.BBB_URL
+      };
+    }
+  } catch (error) {
+    return {
+      status: false,
+      online: false,
+      error: error.message,
+      url: process.env.BBB_URL
+    };
   }
-
-  return respond
 }
 
 async function deleteRecordings(ids) {

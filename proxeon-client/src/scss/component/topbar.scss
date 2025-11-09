@@ -811,3 +811,17 @@
   
   }
 }
+
+.topbar__icon-wrap {
+  margin: auto;
+  position: relative;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

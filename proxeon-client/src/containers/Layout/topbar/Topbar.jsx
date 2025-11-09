@@ -6,6 +6,7 @@ import { accountService } from '~root/_services'
 import TopbarLanguage from './TopbarLanguage';
 import { fetchWrapper } from '~root/_helpers/fetch-wrapper'
 import TopbarActiveUsers from './TopbarActiveUsers'
+import TopbarBBBStatus from './TopbarBBBStatus'
 
 class Topbar extends PureComponent {
   static propTypes = {
@@ -48,6 +49,7 @@ class Topbar extends PureComponent {
             
           </div>
           <div className="topbar__right">
+          { user && user.role==="Admin" && <TopbarBBBStatus />}
           { user && user.role==="Admin" && <TopbarActiveUsers />}
             <TopbarLanguage />
             <TopbarProfile />
