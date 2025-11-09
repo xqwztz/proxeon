@@ -1,6 +1,14 @@
 const jwt = require('express-jwt');
-const { secret } = require('config.json');
 const db = require('_helpers/db');
+
+// Use JWT_SECRET from .env, fallback to config.json for backward compatibility
+const secret = process.env.JWT_SECRET || (() => {
+    try {
+        return require('config.json').secret;
+    } catch (e) {
+        throw new Error('JWT_SECRET not found! Set JWT_SECRET in .env or secret in config.json');
+    }
+})();
 
 module.exports = authorize;
 

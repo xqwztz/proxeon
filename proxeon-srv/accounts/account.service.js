@@ -1,4 +1,11 @@
-﻿const config = require("config.json");
+﻿// Use JWT_SECRET from .env, fallback to config.json for backward compatibility
+const jwtSecret = process.env.JWT_SECRET || (() => {
+    try {
+        return require("config.json").secret;
+    } catch (e) {
+        throw new Error('JWT_SECRET not found! Set JWT_SECRET in .env or secret in config.json');
+    }
+})();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
@@ -265,7 +272,7 @@ function hash(password) {
 
 function generateJwtToken(account) {
   // create a jwt token containing the account id that expires in 15 minutes
-  return jwt.sign({ sub: account.id, id: account.id }, config.secret, {
+  return jwt.sign({ sub: account.id, id: account.id }, jwtSecret, {
     expiresIn: "15m",
   });
 }

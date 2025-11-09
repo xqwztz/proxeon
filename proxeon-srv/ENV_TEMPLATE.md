@@ -93,9 +93,18 @@ JWT_SECRET=wygeneruj-nowy-dla-produkcji-min-64-znaki
 
 ## ⚡ Jak to działa:
 
-### Priority order:
-1. **Jeśli `MONGO_URI` jest w `.env`** → użyje tego ✅ (PRODUKCJA)
-2. **Jeśli brak `MONGO_URI`** → użyje `config.json` (DEVELOPMENT)
+### Priority order (dla wszystkich zmiennych):
+1. **Jeśli zmienna jest w `.env`** → użyje tej wartości ✅ (PRODUKCJA)
+2. **Jeśli brak w `.env`** → użyje `config.json` jako fallback (DEVELOPMENT)
+
+### Zmienne które można ustawić w `.env`:
+- `MONGO_URI` - MongoDB connection string
+- `JWT_SECRET` - JWT secret key
+- `EMAIL_FROM` - Email nadawcy
+- `EMAIL_HOST` - SMTP host
+- `EMAIL_PORT` - SMTP port
+- `EMAIL_USER` - SMTP username
+- `EMAIL_PASSWORD` - SMTP password
 
 ### Development (lokalnie):
 ```bash
@@ -117,14 +126,21 @@ JWT_SECRET=wygeneruj-nowy-dla-produkcji-min-64-znaki
 ## 🔒 Bezpieczeństwo:
 
 ### ✅ DOBRZE:
-- `.env` na serwerze z production credentials
-- `env.local` w repo jako template
-- `config.json` dla development (bez production credentials)
+- `.env` na serwerze z production credentials (NIE w repo)
+- `env.local` w repo jako template (bez prawdziwych haseł)
+- `config.json` w repo dla development (bez production credentials)
+- Wszystkie production credentials w `.env` na serwerze
 
 ### ❌ ŹLE:
 - Commitowanie `.env` z hasłami do Git
 - Production credentials w `config.json` w repo
 - Używanie tych samych credentials dla dev i prod
+- Brak `.env` na serwerze (aplikacja nie zadziała)
+
+### ⚠️ WAŻNE:
+- **Na produkcji:** Wszystkie zmienne MUSZĄ być w `.env` (config.json jest opcjonalny jako fallback)
+- **Przy deploy:** `.env` NIE jest deployowany (jest wykluczony w rsync)
+- **Po deploy:** Musisz ręcznie skonfigurować `.env` na serwerze
 
 ---
 
