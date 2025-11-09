@@ -15,7 +15,19 @@ const dataReportsTable = (props) => {
     if(props.recording!=undefined){
         let dateToDisplay = getRealTime(props.recording.startTime);
         let endTime =  getRealTime(props.recording.endTime);
-        let url = props.url+props.recording.internalMeetingID+"/"+props.recording.internalMeetingID+".mp4";
+        
+        // Use recordID instead of internalMeetingID for MP4 URL
+        let mp4Url = props.url + props.recording.recordID + "/" + props.recording.recordID + ".mp4";
+        
+        // Check if MP4 format is available (BBB 3.0 with MP4 enabled)
+        let hasMp4 = false;
+        if (props.recording.playback && props.recording.playback.format) {
+            const formats = Array.isArray(props.recording.playback.format) 
+                ? props.recording.playback.format 
+                : [props.recording.playback.format];
+            hasMp4 = formats.some(f => f.type === 'video' || f.type === 'mp4');
+        }
+        
         if(props.recording.meetingID==undefined){
             return (
                 <>
@@ -30,8 +42,20 @@ const dataReportsTable = (props) => {
                     <td>{dateToDisplay}</td>
                     <td>{endTime}</td>
                     <td>{props.recording.state}</td>
-                    <td><a href={props.recording.playback.format.url} className="btn btn-orange" target="_blank">Zobacz nagranie</a> <br/>
-                        <a href={url} className="btn btn-orange" target="_blank">Zobacz mp4</a>
+                    <td>
+                        <a href={props.recording.playback.format.url} className="btn btn-orange" target="_blank" rel="noopener noreferrer">
+                            Zobacz nagranie
+                        </a>
+                        <br/>
+                        {hasMp4 ? (
+                            <a href={mp4Url} className="btn btn-orange" target="_blank" rel="noopener noreferrer">
+                                Zobacz mp4
+                            </a>
+                        ) : (
+                            <span className="text-muted" style={{fontSize: '12px'}}>
+                                (MP4 niedostępny)
+                            </span>
+                        )}
                     </td>
                 </tr>
         )
