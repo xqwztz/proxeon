@@ -104,7 +104,7 @@ async function createAdmin() {
       firstName: '$ADMIN_FIRSTNAME',
       lastName: '$ADMIN_LASTNAME',
       role: 'Admin',
-      isVerified: true,
+      verified: Date.now(), // verified field is required for isVerified virtual property
       created: Date.now()
     });
     
