@@ -158,7 +158,7 @@ NODE_ENV=production
 DOMAIN=meet.sqx.pl
 ```
 
-**Development** - Plik `/home/user/domains/4meet.sqx.pl/.env`:
+**Development** - Plik `/home/user/domains/4meet.sqx.pl/public_nodejs/.env`:
 
 ```env
 # Port API dla development (zarezerwowany w MyDevil.net dla 4meet.sqx.pl)
@@ -267,7 +267,7 @@ EMAIL_PASSWORD=twoje-haslo
 - Testowanie przed merge do `main`
 
 **Wymagane Secrets:**
-- `DEPLOY_PATH_BACKEND_DEV` - ścieżka do backendu (np. `/home/user/domains/4meet.sqx.pl`)
+- `DEPLOY_PATH_BACKEND_DEV` - ścieżka do backendu (np. `/home/user/domains/4meet.sqx.pl/public_nodejs`)
 - Frontend jest deployowany do `DEPLOY_PATH_BACKEND_DEV/static` - nie wymaga osobnego secret
 
 ### 3. manual-deploy.yml

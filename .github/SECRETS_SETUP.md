@@ -47,7 +47,7 @@ Przejdź do: **Settings** → **Secrets and variables** → **Actions** → **Ne
 
 | Secret Name | Opis | Przykład |
 |-------------|------|----------|
-| `DEPLOY_PATH_BACKEND_DEV` | Ścieżka do katalogu backendu (development) | `/home/twoj-login/domains/4meet.sqx.pl` |
+| `DEPLOY_PATH_BACKEND_DEV` | Ścieżka do katalogu backendu (development) | `/home/twoj-login/domains/4meet.sqx.pl/public_nodejs` |
 
 **Uwaga:** Frontend jest deployowany do `DEPLOY_PATH_BACKEND_DEV/static` - nie wymaga osobnego secret.
 
