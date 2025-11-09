@@ -53,8 +53,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: proxeon-srv/package-lock.json
 
       - name: Install backend dependencies
         working-directory: ./proxeon-srv
@@ -85,8 +83,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: proxeon-client/package-lock.json
 
       - name: Install frontend dependencies
         working-directory: ./proxeon-client
