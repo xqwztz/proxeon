@@ -85,13 +85,20 @@ async function createMeeting(params) {
 
   // Przygotuj podstawowe parametry create
   // BBB 3.0 wymaga prawidłowych formatów URL i boolean
+  
+  // Ensure logoutURL has proper protocol
+  let logoutURL = account.hostname || ("https://" + process.env.DOMAIN + ".pl");
+  if (logoutURL && !logoutURL.startsWith('http')) {
+    logoutURL = 'https://' + logoutURL;
+  }
+  
   let createParams = {
     record: true,
     allowStartStopRecording: true,
     attendeePW: user_passw,
     moderatorPW: admin_passw,
     meta_endCallbackUrl: callback,
-    logoutURL: account.hostname || ("https://" + process.env.DOMAIN + ".pl"),
+    logoutURL: logoutURL,
     ["meta_bbb-recording-ready-url"]: recording_callback,
     muteOnStart: Boolean(params.mute_on_start), // Ensure boolean
     guestPolicy: guest_policy,
