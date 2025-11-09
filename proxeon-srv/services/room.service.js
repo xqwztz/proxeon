@@ -122,6 +122,10 @@ async function getLink(params, user) {
         sha = sha1(sha);
         url += "&checksum=" + sha;
 
+        console.log('🔗 JOIN URL Generated (wait loop):', url);
+        console.log('🔑 Join request string:', request);
+        console.log('🔐 Checksum:', sha);
+
         let users = await meetingService.getAttendees(room_wait.meetingID);
 
         let attendee = users.attendee;
@@ -199,6 +203,10 @@ async function getLink(params, user) {
   let sha = request + process.env.BBB_SECRET;
   sha = sha1(sha);
   url += "&checksum=" + sha;
+
+  console.log('🔗 JOIN URL Generated:', url);
+  console.log('🔑 Join request string:', request);
+  console.log('🔐 Checksum:', sha);
 
   return url;
 }
