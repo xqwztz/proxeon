@@ -30,8 +30,8 @@ on:
         type: boolean
         default: false
       
-      restart_pm2:
-        description: 'Restart PM2 after deploy'
+      restart_passenger:
+        description: 'Restart Passenger after deploy (MyDevil.net)'
         required: false
         type: boolean
         default: true
@@ -86,16 +86,16 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: ./proxeon-client
-        run: npm ci
+        run: npm install
 
       - name: Build frontend
         working-directory: ./proxeon-client
         run: |
           # Set environment-specific variables
           if [ "${{ inputs.environment }}" = "production" ]; then
-            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://api.proxeon.pl' }}" > .env.production
+            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://api.meet.sqx.pl' }}" > .env.production
           else
-            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL_STAGING || 'https://staging-api.proxeon.pl' }}" > .env.production
+            echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL_STAGING || 'https://api.4meet.sqx.pl' }}" > .env.production
           fi
           echo "REACT_APP_DOMAIN=proxeon" >> .env.production
           
@@ -201,23 +201,21 @@ jobs:
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_FRONTEND }}/
           echo "✅ Frontend deployed"
 
-      - name: Restart PM2
-        if: ${{ inputs.deploy_backend && inputs.restart_pm2 }}
+      - name: Restart Passenger
+        if: ${{ inputs.deploy_backend && inputs.restart_passenger }}
         run: |
-          echo "🔄 Restarting PM2..."
+          echo "🔄 Restarting Passenger (MyDevil.net)..."
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd ${{ secrets.DEPLOY_PATH_BACKEND }}
             
-            if pm2 list | grep -q "proxeon-backend"; then
-              pm2 reload proxeon-backend
-              echo "✅ PM2 reloaded"
-            else
-              pm2 start app.js --name proxeon-backend
-              pm2 save
-              echo "✅ PM2 started"
-            fi
+            # Create tmp directory if it doesn't exist
+            mkdir -p tmp
             
-            pm2 list
+            # Restart Passenger by touching restart.txt
+            touch tmp/restart.txt
+            
+            echo "✅ Passenger restart triggered (tmp/restart.txt updated)"
+            echo "ℹ️  Application will restart on next HTTP request"
           EOF
 
       - name: Health check
@@ -226,7 +224,7 @@ jobs:
           echo "⏳ Waiting 10 seconds..."
           sleep 10
           
-          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://api.proxeon.pl' }}"
+          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://api.meet.sqx.pl' }}"
           echo "🏥 Health check: $HEALTH_URL"
           
           for i in {1..5}; do
@@ -250,7 +248,7 @@ jobs:
           echo "Environment: ${{ inputs.environment }}"
           echo "Backend deployed: ${{ inputs.deploy_backend }}"
           echo "Frontend deployed: ${{ inputs.deploy_frontend }}"
-          echo "PM2 restarted: ${{ inputs.restart_pm2 }}"
+          echo "Passenger restarted: ${{ inputs.restart_passenger }}"
           echo "Backup created: ${{ !inputs.skip_backup }}"
           echo ""
           echo "Commit: ${{ github.sha }}"

@@ -71,13 +71,13 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: ./proxeon-client
-        run: npm ci
+        run: npm install
 
       - name: Build frontend
         working-directory: ./proxeon-client
         run: |
           # Set production environment variables for build
-          echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://api.proxeon.pl' }}" > .env.production
+          echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://api.meet.sqx.pl' }}" > .env.production
           echo "REACT_APP_DOMAIN=proxeon" >> .env.production
           
           # Build
@@ -96,7 +96,7 @@ jobs:
     needs: [build-backend, build-frontend]
     environment:
       name: production
-      url: https://proxeon.pl
+      url: https://meet.sqx.pl
     
     steps:
       - name: Checkout code
@@ -192,23 +192,19 @@ jobs:
             ./deploy/frontend/ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH_FRONTEND }}/
 
-      - name: Restart backend with PM2
+      - name: Restart Passenger (MyDevil.net)
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd ${{ secrets.DEPLOY_PATH_BACKEND }}
             
-            # Check if PM2 is running the app
-            if pm2 list | grep -q "proxeon-backend"; then
-              echo "Reloading PM2 process (zero-downtime)..."
-              pm2 reload proxeon-backend
-            else
-              echo "Starting new PM2 process..."
-              pm2 start app.js --name proxeon-backend
-              pm2 save
-            fi
+            # Create tmp directory if it doesn't exist
+            mkdir -p tmp
             
-            # Show PM2 status
-            pm2 list
+            # Restart Passenger by touching restart.txt
+            touch tmp/restart.txt
+            
+            echo "✅ Passenger restart triggered (tmp/restart.txt updated)"
+            echo "ℹ️  Application will restart on next HTTP request"
           EOF
 
       - name: Health check
@@ -217,7 +213,7 @@ jobs:
           sleep 10
           
           # Health check - try to reach the API
-          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://api.proxeon.pl' }}"
+          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://api.meet.sqx.pl' }}"
           echo "Checking health at: $HEALTH_URL"
           
           for i in {1..5}; do
