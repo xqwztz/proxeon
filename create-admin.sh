@@ -69,14 +69,14 @@ fi
 echo ""
 print_warning "Tworzę użytkownika Admin..."
 
-# Utwórz tymczasowy skrypt Node.js
-cat > /tmp/create-admin-temp.js << EOF
-const path = require('path');
+# Przejdź do katalogu backendu (gdzie są node_modules)
+cd "$BACKEND_DIR"
+
+# Utwórz tymczasowy skrypt Node.js w katalogu backendu
+TEMP_SCRIPT="$PWD/create-admin-temp.js"
+cat > "$TEMP_SCRIPT" << EOF
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
-
-// Zmień katalog roboczy na backend
-process.chdir('$PWD');
 
 require('dotenv').config();
 
@@ -135,11 +135,18 @@ mongoose.connection.on('error', (err) => {
 });
 EOF
 
-# Uruchom skrypt z katalogu backendu
-node /tmp/create-admin-temp.js
+# Uruchom skrypt Node.js z katalogu backendu (gdzie są node_modules)
+node "$TEMP_SCRIPT"
+EXIT_CODE=$?
 
 # Usuń tymczasowy skrypt
-rm -f /tmp/create-admin-temp.js
+rm -f "$TEMP_SCRIPT"
+
+# Sprawdź kod wyjścia
+if [ $EXIT_CODE -ne 0 ]; then
+    print_error "Błąd podczas tworzenia użytkownika Admin!"
+    exit $EXIT_CODE
+fi
 
 echo ""
 print_success "Gotowe!"
