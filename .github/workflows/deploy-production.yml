@@ -77,7 +77,7 @@ jobs:
         working-directory: ./proxeon-client
         run: |
           # Set production environment variables for build
-          echo "REACT_APP_SERVER_URL=${{ secrets.REACT_APP_SERVER_URL || 'https://meet.sqx.pl' }}" > .env.production
+          echo "REACT_APP_SERVER_URL=https://meet.sqx.pl" > .env.production
           echo "REACT_APP_DOMAIN=proxeon" >> .env.production
           
           # Build (CI=false to allow ESLint warnings)
@@ -213,7 +213,7 @@ jobs:
           sleep 15
           
           # Health check - try to reach the /health endpoint
-          HEALTH_URL="${{ secrets.HEALTH_CHECK_URL || 'https://meet.sqx.pl' }}/health"
+          HEALTH_URL="https://meet.sqx.pl/health"
           echo "🏥 Checking health at: $HEALTH_URL"
           
           # First, test DNS resolution
