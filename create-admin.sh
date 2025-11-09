@@ -28,12 +28,19 @@ print_warning() {
     echo -e "${YELLOW}⚠ $1${NC}"
 }
 
-# Sprawdź czy jesteśmy w katalogu backendu
-if [ ! -f "app.js" ] || [ ! -f "package.json" ]; then
-    print_error "Nie jesteś w katalogu backendu (proxeon-srv)!"
-    echo "Przejdź do katalogu: cd /var/www/proxeon/proxeon-srv"
+# Znajdź katalog backendu (proxeon-srv)
+if [ -d "proxeon-srv" ]; then
+    BACKEND_DIR="proxeon-srv"
+elif [ -f "app.js" ] && [ -f "package.json" ]; then
+    BACKEND_DIR="."
+else
+    print_error "Nie znaleziono katalogu backendu (proxeon-srv)!"
+    echo "Uruchom skrypt z root projektu lub z katalogu proxeon-srv"
     exit 1
 fi
+
+echo "📁 Używam katalogu: $BACKEND_DIR"
+cd "$BACKEND_DIR"
 
 # Poproś o dane admina
 echo "Podaj dane nowego użytkownika Admin:"
@@ -64,8 +71,13 @@ print_warning "Tworzę użytkownika Admin..."
 
 # Utwórz tymczasowy skrypt Node.js
 cat > /tmp/create-admin-temp.js << EOF
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
+
+// Zmień katalog roboczy na backend
+process.chdir('$PWD');
+
 require('dotenv').config();
 
 const config = require('./_helpers/db');
@@ -123,7 +135,7 @@ mongoose.connection.on('error', (err) => {
 });
 EOF
 
-# Uruchom skrypt
+# Uruchom skrypt z katalogu backendu
 node /tmp/create-admin-temp.js
 
 # Usuń tymczasowy skrypt
