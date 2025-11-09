@@ -42,17 +42,30 @@ app.use(
     credentials: true,
   })
 );
+
+// Health check endpoint for CI/CD - MUST be before static middleware
+app.get("/health", (req, res) => {
+  try {
+    // Simple health check - no database or external dependencies
+    res.status(200).json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      port: process.env.PORT || (process.env.NODE_ENV === "production" ? 80 : 1234),
+      nodeEnv: process.env.NODE_ENV || "development"
+    });
+  } catch (error) {
+    console.error("Health check error:", error);
+    res.status(500).json({ 
+      status: "error", 
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 //
 app.use("/", express.static("static"));
-
-// Health check endpoint for CI/CD
-app.get("/health", (req, res) => {
-  res.status(200).json({ 
-    status: "ok", 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
 
 app.get("/getLogoName/:id?", async function (req, res) {
   if (req.params.id) {
