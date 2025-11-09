@@ -44,6 +44,10 @@ jobs:
           rm -rf node_modules/.cache
           rm -f backend.log logs.txt
           
+          # Copy create-admin.sh script to backend directory
+          cp ../create-admin.sh ./create-admin.sh
+          chmod +x ./create-admin.sh
+          
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:

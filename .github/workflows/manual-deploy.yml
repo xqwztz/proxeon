@@ -58,6 +58,13 @@ jobs:
         working-directory: ./proxeon-srv
         run: npm ci --production
 
+      - name: Prepare backend artifact
+        working-directory: ./proxeon-srv
+        run: |
+          # Copy create-admin.sh script to backend directory
+          cp ../create-admin.sh ./create-admin.sh
+          chmod +x ./create-admin.sh
+
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:
