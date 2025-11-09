@@ -37,9 +37,19 @@ async function checkBBBVersion(bbbUrl = null) {
     
     // Parse XML response
     const result = JSON.parse(convert.xml2json(xmlText, { compact: true }));
-    const version = result.response?.version?._text || 'unknown';
+    let version = result.response?.version?._text || 'unknown';
     const apiVersion = result.response?.apiVersion?._text || 'unknown';
     const build = result.response?.build?._text || 'unknown';
+    
+    // BBB 3.0 może zwracać API version 2.0 dla kompatybilności
+    // Wykryj BBB 3.0 po obecności nowych pól GraphQL i Plugin SDK
+    const hasGraphQL = result.response?.graphqlWebsocketUrl?._text || result.response?.graphqlApiUrl?._text;
+    const hasPluginSDK = result.response?.html5PluginSdkVersion?._text;
+    
+    if ((hasGraphQL || hasPluginSDK) && version === '2.0') {
+      version = '3.0'; // To jest BBB 3.0 maskujący się jako 2.0
+      console.log('🔍 Detected BBB 3.0 (API reports 2.0 but has GraphQL/Plugin features)');
+    }
 
     console.log('\n╔════════════════════════════════════════════╗');
     console.log('║   BigBlueButton Server Information         ║');

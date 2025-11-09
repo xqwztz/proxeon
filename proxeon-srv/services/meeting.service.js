@@ -116,6 +116,15 @@ async function createMeeting(params) {
   })
     .then((res) => {
       const obj = JSON.parse(convert.xml2json(res.data, { compact: true }));
+      
+      // Sprawdź czy BBB zwrócił błąd
+      if (obj.response?.returncode?._text !== 'SUCCESS') {
+        const errorMessage = obj.response?.message?._text || 'Unknown BBB error';
+        const errorKey = obj.response?.messageKey?._text || 'unknownError';
+        console.error('❌ BBB API Error:', errorKey, '-', errorMessage);
+        throw new Error(`BBB API Error: ${errorMessage}`);
+      }
+      
       let date = new Date(Date.now());
       date.toString();
       params.startDate = date;
@@ -129,7 +138,9 @@ async function createMeeting(params) {
       await meeting.save();
     })
     .catch((err) => {
-      console.log(err);
+      console.error('❌ Error creating meeting:', err.message || err);
+      console.error('URL:', meetingCreateUrl);
+      throw err; // Rzuć błąd dalej aby można było go obsłużyć
     });
 
   return { meetingID: meeting.meetingID };
