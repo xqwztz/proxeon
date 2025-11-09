@@ -163,6 +163,14 @@ jobs:
           # Install rsync if not available
           rsync --version || sudo apt-get update && sudo apt-get install -y rsync
           
+          # Validate deployment path
+          if [ -z "${{ secrets.DEPLOY_PATH_BACKEND }}" ]; then
+            echo "❌ Error: DEPLOY_PATH_BACKEND secret is not set!"
+            exit 1
+          fi
+          
+          echo "📁 Deployment path: ${{ secrets.DEPLOY_PATH_BACKEND }}"
+          
           # Deploy backend files
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
@@ -191,6 +199,14 @@ jobs:
 
       - name: Deploy frontend
         run: |
+          # Validate deployment path
+          if [ -z "${{ secrets.DEPLOY_PATH_BACKEND }}" ]; then
+            echo "❌ Error: DEPLOY_PATH_BACKEND secret is not set!"
+            exit 1
+          fi
+          
+          echo "📁 Deployment path: ${{ secrets.DEPLOY_PATH_BACKEND }}/static"
+          
           # Deploy frontend static files to static directory
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \

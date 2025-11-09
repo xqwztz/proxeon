@@ -161,6 +161,15 @@ jobs:
       - name: Deploy backend
         run: |
           echo "🚀 Deploying backend to development..."
+          
+          # Validate deployment path
+          if [ -z "${{ secrets.DEPLOY_PATH_BACKEND_DEV }}" ]; then
+            echo "❌ Error: DEPLOY_PATH_BACKEND_DEV secret is not set!"
+            exit 1
+          fi
+          
+          echo "📁 Deployment path: ${{ secrets.DEPLOY_PATH_BACKEND_DEV }}"
+          
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             --exclude='node_modules' \
@@ -190,6 +199,15 @@ jobs:
       - name: Deploy frontend
         run: |
           echo "🚀 Deploying frontend to development..."
+          
+          # Validate deployment path
+          if [ -z "${{ secrets.DEPLOY_PATH_BACKEND_DEV }}" ]; then
+            echo "❌ Error: DEPLOY_PATH_BACKEND_DEV secret is not set!"
+            exit 1
+          fi
+          
+          echo "📁 Deployment path: ${{ secrets.DEPLOY_PATH_BACKEND_DEV }}/static"
+          
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
             ./deploy/frontend/ \
