@@ -44,7 +44,7 @@ class Topbar extends PureComponent {
         <div className="topbar__wrapper">
           <div className="topbar__left">
             {this.state.logo_loaded ?
-              <Link style={{ "backgroundImage": "url('" + process.env.REACT_APP_SERVER_URL + "/getLogo/" + this.state.logoName + "'" }} className="topbar__logo ml-3" to="/" />
+              <Link style={{ "backgroundImage": "url('" + process.env.REACT_APP_SERVER_URL + "/getLogo/" + this.state.logoName + "'" }} className="topbar__logo" to="/" />
               : null}
             
           </div>
