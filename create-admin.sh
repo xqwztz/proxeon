@@ -90,27 +90,38 @@ async function createAdmin() {
     // Sprawdź czy admin już istnieje
     const existing = await Account.findOne({ email: '$ADMIN_EMAIL' });
     if (existing) {
-      console.error('❌ Użytkownik z tym emailem już istnieje!');
-      process.exit(1);
+      console.log('⚠️  Użytkownik z tym emailem już istnieje!');
+      console.log('🔄 Aktualizuję użytkownika...');
+      
+      // Zaktualizuj dane użytkownika
+      existing.passwordHash = await bcrypt.hash('$ADMIN_PASSWORD', 10);
+      existing.firstName = '$ADMIN_FIRSTNAME';
+      existing.lastName = '$ADMIN_LASTNAME';
+      existing.role = 'Admin';
+      existing.verified = Date.now(); // Ustaw verified żeby isVerified zwracało true
+      existing.updated = Date.now();
+      
+      await existing.save();
+      console.log('✅ Użytkownik Admin zaktualizowany pomyślnie!');
+    } else {
+      // Hashuj hasło
+      const passwordHash = await bcrypt.hash('$ADMIN_PASSWORD', 10);
+      
+      // Utwórz admina
+      const admin = new Account({
+        email: '$ADMIN_EMAIL',
+        passwordHash: passwordHash,
+        firstName: '$ADMIN_FIRSTNAME',
+        lastName: '$ADMIN_LASTNAME',
+        role: 'Admin',
+        verified: Date.now(), // verified field is required for isVerified virtual property
+        created: Date.now()
+      });
+      
+      await admin.save();
+      console.log('✅ Użytkownik Admin utworzony pomyślnie!');
     }
     
-    // Hashuj hasło
-    const passwordHash = await bcrypt.hash('$ADMIN_PASSWORD', 10);
-    
-    // Utwórz admina
-    const admin = new Account({
-      email: '$ADMIN_EMAIL',
-      passwordHash: passwordHash,
-      firstName: '$ADMIN_FIRSTNAME',
-      lastName: '$ADMIN_LASTNAME',
-      role: 'Admin',
-      verified: Date.now(), // verified field is required for isVerified virtual property
-      created: Date.now()
-    });
-    
-    await admin.save();
-    
-    console.log('✅ Użytkownik Admin utworzony pomyślnie!');
     console.log('');
     console.log('Dane logowania:');
     console.log('Email: $ADMIN_EMAIL');
