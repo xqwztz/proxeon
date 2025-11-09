@@ -149,13 +149,25 @@ nano .env  # Skonfiguruj zmienne
 
 ### 4. Konfiguracja .env na serwerze
 
-Plik `/home/user/domains/meet.sqx.pl/.env`:
+**Production** - Plik `/home/user/domains/meet.sqx.pl/.env`:
 
 ```env
-# Port zarezerwowany w MyDevil.net dla meet.sqx.pl
-PORT=55984
+# Port API dla produkcji (zarezerwowany w MyDevil.net dla meet.sqx.pl)
+PORT_API_PRODUCTION=55984
 NODE_ENV=production
 DOMAIN=meet.sqx.pl
+```
+
+**Development** - Plik `/home/user/domains/4meet.sqx.pl/.env`:
+
+```env
+# Port API dla development (zarezerwowany w MyDevil.net dla 4meet.sqx.pl)
+PORT_API_DEV=1234
+NODE_ENV=development
+DOMAIN=4meet.sqx.pl
+```
+
+**Wspólne zmienne dla obu środowisk:**
 
 # BigBlueButton
 BBB_URL=https://twoj-serwer-bbb.pl/bigbluebutton/
@@ -176,6 +188,8 @@ EMAIL_PORT=587
 EMAIL_USER=twoj-email
 EMAIL_PASSWORD=twoje-haslo
 ```
+
+**Uwaga:** Port API jest teraz konfigurowany przez zmienne `PORT_API_PRODUCTION` (produkcja) i `PORT_API_DEV` (development). Jeśli nie są ustawione, aplikacja użyje wartości domyślnych (55984 dla produkcji, 1234 dla development).
 
 **⚠️ WAŻNE:** Plik `.env` NIE JEST deployowany przez CI/CD - musisz go skonfigurować ręcznie na serwerze!
 

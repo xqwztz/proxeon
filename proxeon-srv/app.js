@@ -46,12 +46,20 @@ app.use(
 // Health check endpoint for CI/CD - MUST be before static middleware
 app.get("/health", (req, res) => {
   try {
+    // Get port using same logic as server startup
+    let healthPort;
+    if (process.env.NODE_ENV === "production") {
+      healthPort = process.env.PORT_API_PRODUCTION || process.env.PORT || 55984;
+    } else {
+      healthPort = process.env.PORT_API_DEV || process.env.PORT || 1234;
+    }
+    
     // Simple health check - no database or external dependencies
     res.status(200).json({ 
       status: "ok", 
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      port: process.env.PORT || (process.env.NODE_ENV === "production" ? 80 : 1234),
+      port: healthPort,
       nodeEnv: process.env.NODE_ENV || "development"
     });
   } catch (error) {
@@ -175,8 +183,15 @@ app.post("/upload", authorize(Role.Admin), function (req, res) {
 });
 
 // start server
-const port =
-  process.env.NODE_ENV === "production" ? process.env.PORT || 80 : 1234;
+// Use environment-specific port variables with fallbacks
+let port;
+if (process.env.NODE_ENV === "production") {
+  // Production: use PORT_API_PRODUCTION (default: 55984) or fallback to PORT or 80
+  port = process.env.PORT_API_PRODUCTION || process.env.PORT || 55984;
+} else {
+  // Development: use PORT_API_DEV (default: 1234) or fallback to PORT or 1234
+  port = process.env.PORT_API_DEV || process.env.PORT || 1234;
+}
 const server = app.listen(port, () => {
   console.log("Server listening on port " + port);
 });

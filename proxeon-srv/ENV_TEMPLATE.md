@@ -24,9 +24,18 @@ Przykładowa konfiguracja pliku `.env` dla Proxeon Backend.
 # ============================================
 # Server Configuration
 # ============================================
-# PORT - dla MyDevil.net meet.sqx.pl użyj zarezerwowanego portu: 55984
-# PORT - dla development lokalnie: 1234
+# PORT_API_PRODUCTION - Port API dla produkcji (MyDevil.net meet.sqx.pl)
+# Domyślnie: 55984 (jeśli nie ustawione, użyje tej wartości)
+PORT_API_PRODUCTION=55984
+
+# PORT_API_DEV - Port API dla development (MyDevil.net 4meet.sqx.pl)
+# Domyślnie: 1234 (jeśli nie ustawione, użyje tej wartości)
+PORT_API_DEV=1234
+
+# PORT - Fallback port (używany tylko jeśli PORT_API_PRODUCTION/PORT_API_DEV nie są ustawione)
+# Dla produkcji: 55984, dla development: 1234
 PORT=55984
+
 NODE_ENV=production
 DOMAIN=meet.sqx.pl
 
@@ -69,10 +78,10 @@ EMAIL_PASSWORD=twoje-haslo-email
 
 ## 🎯 Dla Twojej nowej pustej bazy produkcyjnej:
 
-**NA SERWERZE PRODUKCYJNYM** (`~/domains/api.proxeon.pl/.env`):
+**NA SERWERZE PRODUKCYJNYM** (`~/domains/meet.sqx.pl/.env`):
 
 ```env
-PORT=1234
+PORT_API_PRODUCTION=55984
 NODE_ENV=production
 DOMAIN=proxeon
 
@@ -98,6 +107,9 @@ JWT_SECRET=wygeneruj-nowy-dla-produkcji-min-64-znaki
 2. **Jeśli brak w `.env`** → użyje `config.json` jako fallback (DEVELOPMENT)
 
 ### Zmienne które można ustawić w `.env`:
+- `PORT_API_PRODUCTION` - Port API dla produkcji (domyślnie: 55984)
+- `PORT_API_DEV` - Port API dla development (domyślnie: 1234)
+- `PORT` - Fallback port (używany tylko jeśli PORT_API_PRODUCTION/PORT_API_DEV nie są ustawione)
 - `MONGO_URI` - MongoDB connection string
 - `JWT_SECRET` - JWT secret key
 - `EMAIL_FROM` - Email nadawcy
