@@ -13,6 +13,8 @@ const AdminReports = (props) => {
   const [meetings, setMeetings] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [allRecordingsData, setAllRecordingsData] = useState([]);
+  const [sortField, setSortField] = useState(null);
+  const [sortDirection, setSortDirection] = useState("asc"); // "asc" or "desc"
 
   useEffect(() => {
     getMeetings();
@@ -52,6 +54,67 @@ const AdminReports = (props) => {
     setRecordings(records);
   };
 
+  const sortRecordings = (data, field, direction) => {
+    const sorted = [...data].sort((a, b) => {
+      let aValue, bValue;
+
+      switch (field) {
+        case "name":
+          aValue = (a.name || "").toLowerCase();
+          bValue = (b.name || "").toLowerCase();
+          break;
+        case "startTime":
+          aValue = parseInt(a.startTime) || 0;
+          bValue = parseInt(b.startTime) || 0;
+          break;
+        case "endTime":
+          aValue = parseInt(a.endTime) || 0;
+          bValue = parseInt(b.endTime) || 0;
+          break;
+        case "state":
+          aValue = (a.state || "").toLowerCase();
+          bValue = (b.state || "").toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  };
+
+  const handleSort = (field) => {
+    const newDirection = 
+      sortField === field && sortDirection === "asc" ? "desc" : "asc";
+    
+    setSortField(field);
+    setSortDirection(newDirection);
+
+    // Get current filtered data or all data
+    const dataToSort = searchQuery.trim() 
+      ? allRecordingsData.filter((recording) => {
+          const searchLower = searchQuery.toLowerCase();
+          const name = (recording.name || "").toLowerCase();
+          const meetingID = (recording.meetingID || "").toLowerCase();
+          const internalMeetingID = (recording.internalMeetingID || "").toLowerCase();
+          
+          return name.includes(searchLower) || 
+                 meetingID.includes(searchLower) || 
+                 internalMeetingID.includes(searchLower);
+        })
+      : allRecordingsData;
+
+    const sorted = sortRecordings(dataToSort, field, newDirection);
+    
+    meetingService.getAllRecordings().then((res) => {
+      renderRecordings(sorted, res.BBB_DOWNLOAD_URL);
+    });
+  };
+
   const handleSearch = (query) => {
     setSearchQuery(query);
     
@@ -59,7 +122,10 @@ const AdminReports = (props) => {
       // If search is empty, show all recordings
       meetingService.getAllRecordings().then((res) => {
         if (Array.isArray(res.recordings)) {
-          renderRecordings(res.recordings, res.BBB_DOWNLOAD_URL);
+          const dataToRender = sortField 
+            ? sortRecordings(res.recordings, sortField, sortDirection)
+            : res.recordings;
+          renderRecordings(dataToRender, res.BBB_DOWNLOAD_URL);
         }
       });
       return;
@@ -77,8 +143,12 @@ const AdminReports = (props) => {
              internalMeetingID.includes(searchLower);
     });
 
+    const dataToRender = sortField 
+      ? sortRecordings(filtered, sortField, sortDirection)
+      : filtered;
+
     meetingService.getAllRecordings().then((res) => {
-      renderRecordings(filtered, res.BBB_DOWNLOAD_URL);
+      renderRecordings(dataToRender, res.BBB_DOWNLOAD_URL);
     });
   };
 
@@ -159,12 +229,56 @@ const AdminReports = (props) => {
               {loadRecording && typeof(recordings) !== "string" ? <Table className="table--bordered" responsive>
                 <thead>
                   <tr>
-                    <th>{props.t("admin.meeting-name")}</th>
+                    <th 
+                      onClick={() => handleSort("name")} 
+                      style={{ cursor: "pointer", userSelect: "none" }}
+                      title="Kliknij aby sortować"
+                    >
+                      {props.t("admin.meeting-name")}
+                      {sortField === "name" && (
+                        <span style={{ marginLeft: "5px" }}>
+                          {sortDirection === "asc" ? "▲" : "▼"}
+                        </span>
+                      )}
+                    </th>
                     <th>{props.t("admin.meeting-id")}</th>
                     <th>{props.t("admin.meeting-internal-id")}</th>
-                    <th>{props.t("admin.meeting-createDate")}</th>
-                    <th>{props.t("admin.meeting-endTime")}</th>
-                    <th>{props.t("admin.meeting-state")}</th>
+                    <th 
+                      onClick={() => handleSort("startTime")} 
+                      style={{ cursor: "pointer", userSelect: "none" }}
+                      title="Kliknij aby sortować"
+                    >
+                      {props.t("admin.meeting-createDate")}
+                      {sortField === "startTime" && (
+                        <span style={{ marginLeft: "5px" }}>
+                          {sortDirection === "asc" ? "▲" : "▼"}
+                        </span>
+                      )}
+                    </th>
+                    <th 
+                      onClick={() => handleSort("endTime")} 
+                      style={{ cursor: "pointer", userSelect: "none" }}
+                      title="Kliknij aby sortować"
+                    >
+                      {props.t("admin.meeting-endTime")}
+                      {sortField === "endTime" && (
+                        <span style={{ marginLeft: "5px" }}>
+                          {sortDirection === "asc" ? "▲" : "▼"}
+                        </span>
+                      )}
+                    </th>
+                    <th 
+                      onClick={() => handleSort("state")} 
+                      style={{ cursor: "pointer", userSelect: "none" }}
+                      title="Kliknij aby sortować"
+                    >
+                      {props.t("admin.meeting-state")}
+                      {sortField === "state" && (
+                        <span style={{ marginLeft: "5px" }}>
+                          {sortDirection === "asc" ? "▲" : "▼"}
+                        </span>
+                      )}
+                    </th>
                     <th>{props.t("admin.meeting-info")}</th>
                   </tr>
                 </thead>
