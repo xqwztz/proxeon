@@ -84,15 +84,16 @@ async function createMeeting(params) {
     "https://" + process.env.DOMAIN + ".pl/meetings/recordingReady";
 
   // Przygotuj podstawowe parametry create
+  // BBB 3.0 wymaga prawidłowych formatów URL i boolean
   let createParams = {
     record: true,
     allowStartStopRecording: true,
     attendeePW: user_passw,
     moderatorPW: admin_passw,
     meta_endCallbackUrl: callback,
-    logoutURL: account.hostname? account.hostname: "https://" + process.env.DOMAIN + ".pl",
+    logoutURL: account.hostname || ("https://" + process.env.DOMAIN + ".pl"),
     ["meta_bbb-recording-ready-url"]: recording_callback,
-    muteOnStart: params.mute_on_start,
+    muteOnStart: Boolean(params.mute_on_start), // Ensure boolean
     guestPolicy: guest_policy,
   };
 
@@ -106,7 +107,11 @@ async function createMeeting(params) {
   // Dostosuj parametry do wersji BBB (usuń przestarzałe dla 3.0)
   createParams = await adaptCreateParameters(createParams);
 
+  console.log('🔍 Creating meeting with params:', JSON.stringify(createParams, null, 2));
+  
   let meetingCreateUrl = api.administration.create(params.name, id, createParams);
+  
+  console.log('🔗 BBB API URL:', meetingCreateUrl);
 
   await axios({
     method: "post",
