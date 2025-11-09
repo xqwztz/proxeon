@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardBody, Col, Table } from "reactstrap";
+import { Card, CardBody, Col, Table, Input, FormGroup } from "reactstrap";
 import { withTranslation } from "react-i18next";
 import { meetingService } from "~root/_services/meeting.service";
 import { alertService } from "~root/_services";
@@ -11,6 +11,8 @@ const AdminReports = (props) => {
 
   const [recordings, setRecordings] = useState(null);
   const [meetings, setMeetings] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [allRecordingsData, setAllRecordingsData] = useState([]);
 
   useEffect(() => {
     getMeetings();
@@ -19,25 +21,64 @@ const AdminReports = (props) => {
 
   const getRecordings = async () => {
     await meetingService.getAllRecordings().then((res) => {
-      let records;
-
       if (Array.isArray(res.recordings)) {
-        records = res.recordings.map(function (item, index) {
-          return (
-            <ReportsTable
-              recording={item}
-              key={index}
-              url={res.BBB_DOWNLOAD_URL}
-            />
-          );
-        });
-      } else if (typeof res === "object") {
-        records = <ReportsTable recording={res.recordings} />;
+        setAllRecordingsData(res.recordings);
+        renderRecordings(res.recordings, res.BBB_DOWNLOAD_URL);
+      } else if (typeof res === "object" && res.recordings) {
+        setAllRecordingsData([res.recordings]);
+        renderRecordings([res.recordings], res.BBB_DOWNLOAD_URL);
       } else {
-        records = "Niczego nie znaleziono";
+        setRecordings("Niczego nie znaleziono");
       }
-      setRecordings(records);
       setLoadRecording(true);
+    });
+  };
+
+  const renderRecordings = (recordingsData, downloadUrl) => {
+    if (recordingsData.length === 0) {
+      setRecordings("Niczego nie znaleziono");
+      return;
+    }
+
+    const records = recordingsData.map(function (item, index) {
+      return (
+        <ReportsTable
+          recording={item}
+          key={index}
+          url={downloadUrl}
+        />
+      );
+    });
+    setRecordings(records);
+  };
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      // If search is empty, show all recordings
+      meetingService.getAllRecordings().then((res) => {
+        if (Array.isArray(res.recordings)) {
+          renderRecordings(res.recordings, res.BBB_DOWNLOAD_URL);
+        }
+      });
+      return;
+    }
+
+    // Filter recordings by name, meetingID, or internalMeetingID
+    const filtered = allRecordingsData.filter((recording) => {
+      const searchLower = query.toLowerCase();
+      const name = (recording.name || "").toLowerCase();
+      const meetingID = (recording.meetingID || "").toLowerCase();
+      const internalMeetingID = (recording.internalMeetingID || "").toLowerCase();
+      
+      return name.includes(searchLower) || 
+             meetingID.includes(searchLower) || 
+             internalMeetingID.includes(searchLower);
+    });
+
+    meetingService.getAllRecordings().then((res) => {
+      renderRecordings(filtered, res.BBB_DOWNLOAD_URL);
     });
   };
 
@@ -101,6 +142,20 @@ const AdminReports = (props) => {
                   {props.t("admin.recorded-meetings")}
                 </h1>
               </div>
+              <FormGroup style={{ marginBottom: "20px" }}>
+                <Input
+                  type="text"
+                  placeholder="🔍 Szukaj nagrań (nazwa, meetingID, internalMeetingID)..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  style={{
+                    padding: "10px",
+                    fontSize: "16px",
+                    border: "2px solid #ddd",
+                    borderRadius: "5px"
+                  }}
+                />
+              </FormGroup>
               {loadRecording && typeof(recordings) !== "string" ? <Table className="table--bordered" responsive>
                 <thead>
                   <tr>
