@@ -102,6 +102,7 @@ async function createMeeting(params) {
     ["meta_bbb-recording-ready-url"]: recording_callback,
     muteOnStart: Boolean(params.mute_on_start), // Ensure boolean
     guestPolicy: guest_policy,
+    welcome: "Witaj!", // Domyślna wiadomość powitalna
   };
 
   // Waliduj i dostosuj parametry do wersji BBB
